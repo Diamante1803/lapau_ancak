@@ -1,0 +1,49 @@
+<?php
+
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AdminPusatController;
+use App\Http\Controllers\PublicController;
+use App\Http\Controllers\PenawaranController;
+use Illuminate\Support\Facades\Route;
+
+require __DIR__.'/auth.php';
+require __DIR__.'/admin/satker.php';
+require __DIR__.'/admin/pusat.php';
+// require __DIR__.'/lelang.php';
+require __DIR__.'/pembeli.php';
+
+Route::get('/', function () {
+
+    return view('home');
+});
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+Route::get('auth/tambah', [AdminPusatController::class, 'create']);
+Route::post('auth/tambah', [AdminPusatController::class, 'store'])->name('admin.createAdminSatker');
+
+// routes/web.php — public, tidak perlu auth
+Route::get('/', [PublicController::class, 'index'])->name('public.index');
+Route::get('/lelang', [PublicController::class, 'lelang'])->name('public.lelang');
+Route::get('/lelang/{lelang}', [PublicController::class, 'detail'])->name('public.detail');
+Route::get('/satker/{satker}', [PublicController::class, 'satker'])->name('public.satker');
+
+// routes/web.php
+Route::post('/lelang/{lelang}/magic-link', [PenawaranController::class, 'requestMagicLink'])
+    ->name('public.magic-link');
+
+Route::get('/verify', [PenawaranController::class, 'verifyMagicLink'])
+    ->name('public.verify');
+
+Route::post('/lelang/{lelang}/bid', [PenawaranController::class, 'submitPenawaran'])
+    ->name('public.bid');
+
+require __DIR__.'/auth.php';
