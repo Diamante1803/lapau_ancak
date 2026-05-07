@@ -57,7 +57,7 @@
                     @endif
 
                     {{-- Badge Live --}}
-                    <div class="absolute top-3 left-3 z-10">
+                    <div class="absolute top-3 left-3 z-10" id="badge-live">
                         <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
                             <span class="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
                             LIVE
@@ -133,7 +133,7 @@
                 </div>
 
                 {{-- Minimal penawaran --}}
-                <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-sm flex justify-between">
+                <div id="info-min-penawaran" class="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-sm flex justify-between">
                     <span class="text-yellow-700">Minimal penawaran berikutnya</span>
                     <span class="font-bold text-yellow-800" id="minPenawaranDetail">
                         Rp {{ number_format($minPenawaran, 0, ',', '.') }}
@@ -154,7 +154,7 @@
             </div>
 
             {{-- TOMBOL AJUKAN PENAWARAN --}}
-            <button onclick="bukaModal()"
+            <button id="tombol-penawaran" onclick="bukaModal()"
                 class="w-full bg-blue-700 hover:bg-blue-800 active:scale-95 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-lg shadow-lg shadow-blue-200">
                 <i class="fas fa-gavel"></i>
                 Ajukan Penawaran
@@ -510,20 +510,69 @@ function updateCountdowns() {
         const now  = new Date().getTime();
         const diff = end - now;
 
+        const tombol = document.getElementById('tombol-penawaran');
+
         if (diff <= 0) {
-            el.textContent = 'Lelang Selesai';
+            // Update teks countdown
+            el.textContent = 'Lelang Telah Berakhir';
+            el.classList.remove('text-blue-800');
             el.classList.add('text-red-500');
+
+            // Update container countdown jadi abu
+            const box = el.closest('.bg-blue-50');
+            if (box) {
+                box.classList.remove('bg-blue-50', 'border-blue-100');
+                box.classList.add('bg-gray-50', 'border-gray-100');
+                const label = box.querySelector('.text-blue-500');
+                if (label) {
+                    label.classList.remove('text-blue-500');
+                    label.classList.add('text-gray-400');
+                    label.textContent = '⏱ Waktu Lelang';
+                }
+            }
+
+            // Disable tombol penawaran
+            if (tombol && !tombol.dataset.disabled) {
+                tombol.dataset.disabled = 'true';
+                tombol.onclick = null;
+                tombol.disabled = true;
+                tombol.className = 'w-full bg-gray-200 text-gray-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 text-lg cursor-not-allowed';
+                tombol.innerHTML = '<i class="fas fa-clock"></i> Lelang Telah Berakhir';
+            }
+
+            // Sembunyikan info minimal penawaran
+            const infoMin = document.getElementById('info-min-penawaran');
+            if (infoMin) infoMin.style.display = 'none';
+
+            const badgeLive = document.getElementById('badge-live');
+            if (badgeLive && !badgeLive.dataset.updated) {
+                badgeLive.dataset.updated = 'true';
+                badgeLive.innerHTML = `
+                    <span class="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                        SELESAI
+                    </span>
+                `;
+            }
+
             return;
         }
 
+        // Countdown normal
         const h = Math.floor(diff / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
 
         el.textContent =
-            String(h).padStart(2,'0') + ':' +
-            String(m).padStart(2,'0') + ':' +
-            String(s).padStart(2,'0');
+            String(h).padStart(2, '0') + ':' +
+            String(m).padStart(2, '0') + ':' +
+            String(s).padStart(2, '0');
+
+        // Warna merah jika sisa < 1 jam
+        if (diff < 3600000) {
+            el.classList.remove('text-blue-800');
+            el.classList.add('text-red-500');
+        }
     });
 }
 setInterval(updateCountdowns, 1000);
@@ -575,6 +624,33 @@ document.getElementById('modalPenawaran').addEventListener('click', function(e) 
 
 document.getElementById('modalZoom').addEventListener('click', function(e) {
     if (e.target === this) tutupZoom();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    @if($lelang->status === 'closed')
+
+    const tombol = document.getElementById('tombol-penawaran');
+    if (tombol) {
+        tombol.onclick   = null;
+        tombol.disabled  = true;
+        tombol.className = 'w-full bg-gray-200 text-gray-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 text-lg cursor-not-allowed';
+        tombol.innerHTML = '<i class="fas fa-clock"></i> Lelang Telah Berakhir';
+    }
+
+    const infoMin = document.getElementById('info-min-penawaran');
+    if (infoMin) infoMin.style.display = 'none';
+
+    const badgeLive = document.getElementById('badge-live');
+    if (badgeLive) {
+        badgeLive.innerHTML = `
+            <span class="bg-gray-400 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                SELESAI
+            </span>
+        `;
+    }
+
+    @endif
 });
 </script>
 

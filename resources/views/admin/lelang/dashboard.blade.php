@@ -320,7 +320,7 @@
                                     <span class="badge badge-info d-block py-1" style="border-radius: 6px; font-size: 0.75rem;">
                                         <i class="fas fa-calendar mr-1"></i>Terjadwal
                                         <small class="d-block mt-1" style="font-weight: normal;">
-                                            {{ \Carbon\Carbon::parse($lelang->tanggal_mulai)->format('d M Y') }}
+                                            {{ \Carbon\Carbon::parse($lelang->tanggal_mulai)->format('d M Y, H:i') }} WIB
                                         </small>
                                     </span>
 
@@ -360,74 +360,7 @@
 
                         </div>
                     </div>
-
-                    {{-- MODAL JADWALKAN LELANG --}}
-                    <!-- <div class="modal fade" id="modalJadwal-{{ $barang->id }}" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
-
-                                <div class="modal-header"
-                                    style="background: linear-gradient(90deg, #1a6b3c, #145c32);">
-                                    <h5 class="modal-title font-weight-bold text-white">
-                                        <i class="fas fa-gavel mr-2" style="color: #f6c90e;"></i>
-                                        Jadwalkan Lelang
-                                    </h5>
-                                    <button type="button" class="close text-white" data-dismiss="modal">
-                                        <span>&times;</span>
-                                    </button>
-                                </div>
-
-                                <form action="{{ route('admin.lelang.jadwalkan', $barang->id) }}" method="POST">
-                                    @csrf
-
-                                    <div class="modal-body" style="background: #f8fff9;">
-
-                                        <div class="mb-3 p-3 rounded" style="background: white; border: 1px solid #e3e6f0;">
-                                            <div class="font-weight-bold" style="color: #2d3748;">
-                                                {{ $barang->nama_barang }}
-                                            </div>
-                                            <small class="text-muted">{{ $barang->deskripsi ?? '-' }}</small>
-                                            <div class="font-weight-bold mt-1" style="color: #1a6b3c;">
-                                                Harga Awal: Rp {{ number_format($barang->harga_awal, 0, ',', '.') }}
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold text-muted">Tanggal & Waktu Mulai</label>
-                                            <input type="datetime-local" name="tanggal_mulai"
-                                                class="form-control"
-                                                style="border-radius: 8px;"
-                                                min="{{ now()->format('Y-m-d\TH:i') }}"
-                                                required>
-                                        </div>
-
-                                        <div class="form-group mb-0">
-                                            <label class="small font-weight-bold text-muted">Tanggal & Waktu Selesai</label>
-                                            <input type="datetime-local" name="tanggal_selesai"
-                                                class="form-control"
-                                                style="border-radius: 8px;"
-                                                min="{{ now()->format('Y-m-d\TH:i') }}"
-                                                required>
-                                        </div>
-
-                                    </div>
-
-                                    <div class="modal-footer" style="background: #f8fff9;">
-                                        <button type="button" class="btn btn-sm btn-secondary"
-                                            data-dismiss="modal" style="border-radius: 6px;">
-                                            <i class="fas fa-times mr-1"></i>Batal
-                                        </button>
-                                        <button type="submit" class="btn btn-sm font-weight-bold"
-                                            style="background: #1a6b3c; color: white; border-radius: 6px; padding: 6px 16px;">
-                                            <i class="fas fa-calendar-check mr-1"></i>Jadwalkan
-                                        </button>
-                                    </div>
-                                </form>
-
-                            </div>
-                        </div>
-                    </div> -->
-
+                    
                     @empty
                     <div class="col-12">
                         <div class="text-center py-4 text-muted">

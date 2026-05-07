@@ -383,7 +383,7 @@
                                         {{-- ── BAGIAN BAST ── --}}
                                         <div class="mb-3 p-3 rounded" style="background:white;border:1px solid #e3e6f0;">
                                             <div class="font-weight-bold mb-2" style="color:#1a6b3c;font-size:0.8rem;">
-                                                <i class="fas fa-file-alt mr-1"></i> Berita Acara Serah Terima (BAST)
+                                                <i class="fas fa-file-alt mr-1"></i> Berita Acara Serah Terima (BAST) dengan KTP Pembeli
                                             </div>
 
                                             <div class="form-group mb-2">

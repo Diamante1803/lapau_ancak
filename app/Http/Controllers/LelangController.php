@@ -319,5 +319,36 @@ class LelangController extends Controller
         return view('admin.lelang.aktif', compact('lelangs'));
     }
 
+    public function ajukanLelangUlang(Lelang $lelang)
+    {
+        // Pastikan hanya admin satker pemilik barang
+        if (auth()->user()->role !== 'admin_satker') {
+            abort(403);
+        }
+
+        $milikSatker = $lelang->barang->perkara->pengajuan->satker_id 
+                    === auth()->user()->satker_id;
+
+        if (!$milikSatker) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        // Hanya barang unsold yang bisa diajukan ulang
+        if ($lelang->barang->status !== 'unsold') {
+            return back()->with('error', 'Hanya barang yang tidak terjual yang bisa diajukan ulang.');
+        }
+
+        // Reset status barang ke available
+        $lelang->barang->update(['status' => 'available']);
+
+        // Tandai lelang lama sebagai cancelled agar tidak bentrok
+        // (lelang baru akan dibuat oleh admin pusat)
+        $lelang->update(['status' => 'cancelled']);
+
+        return back()->with('success', 
+            'Barang "' . $lelang->barang->nama_barang . '" berhasil diajukan untuk lelang ulang. ' .
+            'Admin Pusat akan menjadwalkan lelang baru.');
+    }
+
 
 }

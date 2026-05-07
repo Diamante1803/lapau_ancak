@@ -13,21 +13,31 @@ class PublicController extends Controller
         $satkers = Satker::has('pengajuans')->get();
 
         $stats = [
-            'total'      => Lelang::whereIn('status', ['scheduled', 'active', 'closed'])->count(),
-            'aktif'      => Lelang::where('status', 'active')->count(),
-            'mendatang'  => Lelang::where('status', 'scheduled')->count(), // ✅ ganti terjual
+            'total'     => Lelang::whereIn('status', ['scheduled', 'active', 'closed'])->count(),
+            'aktif'     => Lelang::where('status', 'active')->count(),
+            'mendatang' => Lelang::where('status', 'scheduled')->count(),
         ];
+
+        $gracePeriodDays = 2; // sama dengan GRACE_PERIOD_DAYS di JS
+        $graceLimit = now()->subDays($gracePeriodDays);
 
         $lelangsAktif = Lelang::with([
                 'barang.fotoBarang',
                 'barang.perkara.pengajuan.satker',
             ])
-            ->where('status', 'active')
-            ->latest()
+            ->where(function ($q) use ($graceLimit) {
+                $q->where('status', 'active')
+                ->orWhere(function ($q2) use ($graceLimit) {
+                    // closed tapi belum lebih dari 2 hari
+                    $q2->where('status', 'closed')
+                        ->where('tanggal_selesai', '>=', $graceLimit);
+                });
+            })
+            ->orderByRaw("FIELD(status, 'active', 'closed')")
+            ->orderBy('tanggal_selesai', 'asc')
             ->take(6)
             ->get();
 
-        // ✅ Tambah query lelang mendatang
         $lelangsMendatang = Lelang::with([
                 'barang.fotoBarang',
                 'barang.perkara.pengajuan.satker',

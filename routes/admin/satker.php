@@ -58,6 +58,8 @@ use App\Models\Barang;
         ->name('lelang.ganti-pemenang');
     Route::get('lelang/{lelang}/detail', [LelangController::class, 'detail'])
         ->name('lelang.detail');
+    Route::post('lelang/{lelang}/ulang', [LelangController::class, 'ajukanLelangUlang'])
+        ->name('lelang.ulang'); 
 
     Route::get('laporan', [LaporanController::class, 'satker'])
         ->name('laporan.index'); 

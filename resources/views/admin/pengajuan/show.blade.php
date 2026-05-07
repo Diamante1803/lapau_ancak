@@ -720,22 +720,38 @@
 
                             <div class="col-md-12">
                                 <div class="form-group mb-0">
-                                    <label class="small font-weight-bold text-muted">
-                                        Catatan Internal
-                                        <span class="badge"
-                                            style="background: #e8f4fd; color: #1a6b3c; font-size: 0.7rem; border-radius: 10px; padding: 2px 8px;">
-                                            <i class="fas fa-lock mr-1"></i>Hanya terlihat oleh Admin
-                                        </span>
-                                    </label>
-                                    <textarea name="catatan_internal"
-                                        class="form-control form-control-sm"
-                                        rows="2"
-                                        placeholder="Contoh : Hasil penggabungan dari perkara..."
-                                        style="border-radius: 6px;">{{ old('perkara_id') == $perkara->id ? old('catatan_internal') : '' }}</textarea>
-                                    <small class="text-muted" style="font-size: 0.75rem;">
-                                        <i class="fas fa-info-circle mr-1"></i>
-                                        Catatan ini tidak akan ditampilkan kepada pembeli.
-                                    </small>
+
+                                    {{-- Toggle Button --}}
+                                    <button type="button"
+                                        onclick="toggleCatatanInternal({{ $perkara->id }})"
+                                        style="background:none; border:none; padding:0; color:#1a6b3c; font-size:0.82rem; font-weight:600; cursor:pointer;">
+                                        <i class="fas fa-plus-circle mr-1" id="icon-catatan-{{ $perkara->id }}"></i>
+                                        <span id="label-catatan-{{ $perkara->id }}">Barang Gabungan? Tambah Catatan Internal</span>
+                                    </button>
+
+                                    {{-- Field (hidden by default) --}}
+                                    <div id="wrap-catatan-{{ $perkara->id }}" style="display:none; margin-top:10px;">
+
+                                        <div class="d-flex align-items-center mb-1" style="gap:6px;">
+                                            <label class="small font-weight-bold text-muted mb-0">Catatan Internal</label>
+                                            <span class="badge"
+                                                style="background:#e8f4fd; color:#1a6b3c; font-size:0.68rem; border-radius:10px; padding:2px 8px;">
+                                                <i class="fas fa-lock mr-1"></i>Hanya terlihat Admin
+                                            </span>
+                                        </div>
+
+                                        <textarea name="catatan_internal"
+                                            class="form-control form-control-sm"
+                                            rows="2"
+                                            placeholder="Contoh: Hasil penggabungan dari perkara No. 123/2025 dan 456/2025"
+                                            style="border-radius:6px;">{{ old('perkara_id') == $perkara->id ? old('catatan_internal') : '' }}</textarea>
+
+                                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Perkara tanpa barang tersendiri tetap bisa diajukan selama barang gabungannya tercatat di sini.
+                                        </small>
+
+                                    </div>
                                 </div>
                             </div>
 
@@ -1260,6 +1276,34 @@ function validateHargaLimit(input) {
         }
     });
 @endif
+
+function toggleCatatanInternal(perkaraId) {
+    const wrap  = document.getElementById('wrap-catatan-'  + perkaraId);
+    const icon  = document.getElementById('icon-catatan-'  + perkaraId);
+    const label = document.getElementById('label-catatan-' + perkaraId);
+    const isHidden = wrap.style.display === 'none';
+
+    wrap.style.display  = isHidden ? 'block' : 'none';
+    icon.className      = isHidden ? 'fas fa-minus-circle mr-1' : 'fas fa-plus-circle mr-1';
+    label.textContent   = isHidden ? 'Sembunyikan Catatan Internal' : 'Barang Gabungan? Tambah Catatan Internal';
+}
+
+// Auto-expand jika old value sudah terisi (saat validasi gagal)
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('textarea[name="catatan_internal"]').forEach(function (el) {
+        if (el.value.trim() !== '') {
+            const wrap = el.closest('[id^="wrap-catatan-"]');
+            if (wrap) {
+                const id = wrap.id.replace('wrap-catatan-', '');
+                wrap.style.display = 'block';
+                const icon  = document.getElementById('icon-catatan-'  + id);
+                const label = document.getElementById('label-catatan-' + id);
+                if (icon)  icon.className    = 'fas fa-minus-circle mr-1';
+                if (label) label.textContent = 'Sembunyikan Catatan Internal';
+            }
+        }
+    });
+});
 </script>
 
 <style>

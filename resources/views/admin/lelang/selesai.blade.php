@@ -173,10 +173,25 @@
                                     <span class="badge badge-success px-3 py-1" style="border-radius: 20px;">
                                         ✅ Terjual
                                     </span>
-                                @else
-                                    <span class="badge badge-danger px-3 py-1" style="border-radius: 20px;">
-                                        ❌ Tidak Terjual
-                                    </span>
+
+                                @elseif($barang->status === 'unsold')
+                                    <div>
+                                        <span class="badge badge-danger px-3 py-1 d-block mb-1" style="border-radius: 20px;">
+                                            ❌ Tidak Terjual
+                                        </span>
+
+                                        {{-- Tombol ajukan ulang — hanya admin satker --}}
+                                        @if($isSatker)
+                                        <form action="{{ route('satker.lelang.ulang', $lelang->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-block font-weight-bold mt-1"
+                                                style="background: #e8f5ee; color: #1a6b3c; border-radius: 6px; font-size: 0.78rem;"
+                                                onclick="return confirm('Ajukan barang ini untuk lelang ulang?')">
+                                                <i class="fas fa-redo mr-1"></i>Ajukan Lelang Ulang
+                                            </button>
+                                        </form>
+                                        @endif
+                                    </div>
                                 @endif
                             </td>
 
@@ -200,124 +215,7 @@
                             </td>
                             @endif
 
-                        </tr>
-
-                        {{-- MODAL GANTI PEMENANG --}}
-                        @if($isSatker && $lelang->penawarans->count() > 1)
-                        <div class="modal fade" id="modalGantiPemenang-{{ $lelang->id }}" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
-
-                                    <div class="modal-header"
-                                        style="background: linear-gradient(90deg, #856404, #a07800);">
-                                        <h5 class="modal-title font-weight-bold text-white">
-                                            <i class="fas fa-exchange-alt mr-2" style="color: #f6c90e;"></i>
-                                            Ganti Pemenang — {{ $barang->nama_barang }}
-                                        </h5>
-                                        <button type="button" class="close text-white" data-dismiss="modal">
-                                            <span>&times;</span>
-                                        </button>
-                                    </div>
-
-                                    <form method="POST"
-                                        action="{{ route('satker.lelang.ganti-pemenang', $lelang->id) }}">
-                                        @csrf
-
-                                        <div class="modal-body" style="background: #fffdf0;">
-
-                                            {{-- Info pemenang saat ini --}}
-                                            @if($lelang->pemenang)
-                                            <div class="alert py-2 mb-3"
-                                                style="background: #fde8e8; border: 1px solid #f5c6cb; border-radius: 8px; font-size: 0.82rem;">
-                                                <i class="fas fa-info-circle mr-1 text-danger"></i>
-                                                Pemenang saat ini: <strong>{{ $lelang->pemenang->nama }}</strong>
-                                                (Rp {{ number_format($lelang->harga_tertinggi, 0, ',', '.') }})
-                                            </div>
-                                            @endif
-
-                                            {{-- List penawaran sebagai pilihan --}}
-                                            <label class="small font-weight-bold text-muted mb-2 d-block">
-                                                Pilih Pemenang Baru dari Daftar Penawaran:
-                                            </label>
-
-                                            <div class="table-responsive mb-3">
-                                                <table class="table table-sm table-hover mb-0"
-                                                    style="border-radius: 8px; overflow: hidden;">
-                                                    <thead style="background: #f5e6a3;">
-                                                        <tr>
-                                                            <th style="font-size: 0.8rem; color: #856404;">Pilih</th>
-                                                            <th style="font-size: 0.8rem; color: #856404;">Nama</th>
-                                                            <th style="font-size: 0.8rem; color: #856404;">No. HP</th>
-                                                            <th style="font-size: 0.8rem; color: #856404;">Nilai Penawaran</th>
-                                                            <th style="font-size: 0.8rem; color: #856404;">Waktu</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach($lelang->penawarans->sortByDesc('nilai_penawaran') as $idx => $penawaran)
-                                                        <tr style="{{ $penawaran->pembeli_id === $lelang->pemenang_id ? 'background: #fde8e8;' : '' }}">
-                                                            <td class="align-middle">
-                                                                <input type="radio"
-                                                                    name="pembeli_id"
-                                                                    value="{{ $penawaran->pembeli_id }}"
-                                                                    {{ $penawaran->pembeli_id === $lelang->pemenang_id ? 'disabled' : '' }}
-                                                                    required>
-                                                            </td>
-                                                            <td class="align-middle small font-weight-bold">
-                                                                {{ $penawaran->pembeli->nama }}
-                                                                @if($penawaran->pembeli_id === $lelang->pemenang_id)
-                                                                <span class="badge badge-secondary ml-1" style="font-size: 0.6rem;">
-                                                                    Saat ini
-                                                                </span>
-                                                                @endif
-                                                            </td>
-                                                            <td class="align-middle small text-muted">
-                                                                {{ $penawaran->pembeli->no_hp }}
-                                                            </td>
-                                                            <td class="align-middle small font-weight-bold"
-                                                                style="color: #1a6b3c;">
-                                                                Rp {{ number_format($penawaran->nilai_penawaran, 0, ',', '.') }}
-                                                            </td>
-                                                            <td class="align-middle small text-muted">
-                                                                {{ $penawaran->created_at->format('d M Y, H:i') }}
-                                                            </td>
-                                                        </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            <div class="form-group mb-0">
-                                                <label class="small font-weight-bold text-muted">
-                                                    Alasan Penggantian Pemenang
-                                                </label>
-                                                <textarea name="catatan_pemenang" rows="2"
-                                                    class="form-control"
-                                                    style="border-radius: 8px; font-size: 0.85rem;"
-                                                    placeholder="Contoh: Pemenang pertama tidak hadir pada saat serah terima">
-                                                </textarea>
-                                                <small class="text-muted">Opsional namun disarankan untuk dokumentasi</small>
-                                            </div>
-
-                                        </div>
-
-                                        <div class="modal-footer" style="background: #fffdf0;">
-                                            <button type="button" class="btn btn-sm btn-secondary"
-                                                data-dismiss="modal" style="border-radius: 6px;">
-                                                <i class="fas fa-times mr-1"></i>Batal
-                                            </button>
-                                            <button type="submit" class="btn btn-sm font-weight-bold"
-                                                style="background: #856404; color: white; border-radius: 6px; padding: 6px 16px;"
-                                                onclick="return confirm('Yakin ingin mengganti pemenang?')">
-                                                <i class="fas fa-exchange-alt mr-1"></i>Ganti Pemenang
-                                            </button>
-                                        </div>
-
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-
+                        </tr>                        
                         @empty
                         <tr>
                             <td colspan="{{ $isPusat ? 8 : 7 }}" class="text-center py-5 text-muted">
@@ -330,6 +228,121 @@
                 </table>
             </div>
         </div>
+        {{-- MODAL GANTI PEMENANG --}}
+        @if($isSatker && $lelang->penawarans->count() > 1)
+        <div class="modal fade" id="modalGantiPemenang-{{ $lelang->id }}" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
+
+                    <div class="modal-header"
+                        style="background: linear-gradient(90deg, #856404, #a07800);">
+                        <h5 class="modal-title font-weight-bold text-white">
+                            <i class="fas fa-exchange-alt mr-2" style="color: #f6c90e;"></i>
+                            Ganti Pemenang — {{ $barang->nama_barang }}
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+
+                    <form method="POST"
+                        action="{{ route('satker.lelang.ganti-pemenang', $lelang->id) }}">
+                        @csrf
+
+                        <div class="modal-body" style="background: #fffdf0;">
+
+                            {{-- Info pemenang saat ini --}}
+                            @if($lelang->pemenang)
+                            <div class="alert py-2 mb-3"
+                                style="background: #fde8e8; border: 1px solid #f5c6cb; border-radius: 8px; font-size: 0.82rem;">
+                                <i class="fas fa-info-circle mr-1 text-danger"></i>
+                                Pemenang saat ini: <strong>{{ $lelang->pemenang->nama }}</strong>
+                                (Rp {{ number_format($lelang->harga_tertinggi, 0, ',', '.') }})
+                            </div>
+                            @endif
+
+                            {{-- List penawaran sebagai pilihan --}}
+                            <label class="small font-weight-bold text-muted mb-2 d-block">
+                                Pilih Pemenang Baru dari Daftar Penawaran:
+                            </label>
+
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-hover mb-0"
+                                    style="border-radius: 8px; overflow: hidden;">
+                                    <thead style="background: #f5e6a3;">
+                                        <tr>
+                                            <th style="font-size: 0.8rem; color: #856404;">Pilih</th>
+                                            <th style="font-size: 0.8rem; color: #856404;">Nama</th>
+                                            <th style="font-size: 0.8rem; color: #856404;">No. HP</th>
+                                            <th style="font-size: 0.8rem; color: #856404;">Nilai Penawaran</th>
+                                            <th style="font-size: 0.8rem; color: #856404;">Waktu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($lelang->penawarans->sortByDesc('nilai_penawaran') as $idx => $penawaran)
+                                        <tr style="{{ $penawaran->pembeli_id === $lelang->pemenang_id ? 'background: #fde8e8;' : '' }}">
+                                            <td class="align-middle">
+                                                <input type="radio"
+                                                    name="pembeli_id"
+                                                    value="{{ $penawaran->pembeli_id }}"
+                                                    {{ $penawaran->pembeli_id === $lelang->pemenang_id ? 'disabled' : '' }}
+                                                    required>
+                                            </td>
+                                            <td class="align-middle small font-weight-bold">
+                                                {{ $penawaran->pembeli->nama }}
+                                                @if($penawaran->pembeli_id === $lelang->pemenang_id)
+                                                <span class="badge badge-secondary ml-1" style="font-size: 0.6rem;">
+                                                    Saat ini
+                                                </span>
+                                                @endif
+                                            </td>
+                                            <td class="align-middle small text-muted">
+                                                {{ $penawaran->pembeli->no_hp }}
+                                            </td>
+                                            <td class="align-middle small font-weight-bold"
+                                                style="color: #1a6b3c;">
+                                                Rp {{ number_format($penawaran->nilai_penawaran, 0, ',', '.') }}
+                                            </td>
+                                            <td class="align-middle small text-muted">
+                                                {{ $penawaran->created_at->format('d M Y, H:i') }}
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="form-group mb-0">
+                                <label class="small font-weight-bold text-muted">
+                                    Alasan Penggantian Pemenang
+                                </label>
+                                <textarea name="catatan_pemenang" rows="2"
+                                    class="form-control"
+                                    style="border-radius: 8px; font-size: 0.85rem;"
+                                    placeholder="Contoh: Pemenang pertama tidak hadir pada saat serah terima">
+                                </textarea>
+                                <small class="text-muted">Opsional namun disarankan untuk dokumentasi</small>
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer" style="background: #fffdf0;">
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                data-dismiss="modal" style="border-radius: 6px;">
+                                <i class="fas fa-times mr-1"></i>Batal
+                            </button>
+                            <button type="submit" class="btn btn-sm font-weight-bold"
+                                style="background: #856404; color: white; border-radius: 6px; padding: 6px 16px;"
+                                onclick="return confirm('Yakin ingin mengganti pemenang?')">
+                                <i class="fas fa-exchange-alt mr-1"></i>Ganti Pemenang
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
 </div>

@@ -122,7 +122,7 @@
         <div class="grid grid-cols-3 gap-4">
 
             <div class="text-center p-4 rounded-xl bg-blue-50 border border-blue-100">
-                <div class="text-3xl font-bold text-blue-700">{{ $stats['total'] }}</div>
+                <div class="text-3xl font-bold text-blue-700" id="statTotal">{{ $stats['total'] }}</div>
                 <div class="text-sm text-gray-500 mt-1">Total Lelang</div>
             </div>
 
@@ -166,7 +166,9 @@
             @endphp
 
             <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                 data-satker="{{ $satker->id }}">
+                data-satker="{{ $satker->id }}"
+                data-lelang-id="{{ $lelang->id }}"
+                data-end="{{ $lelang->tanggal_selesai->toIso8601String() }}">
 
                 {{-- SLIDESHOW FOTO --}}
                 <div class="relative h-48 bg-gray-100 overflow-hidden">
@@ -285,11 +287,13 @@
                     </div>
 
                     {{-- TOMBOL LIHAT DETAIL --}}
-                    <a href="{{ route('public.detail', $lelang->id) }}"
-                        class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
-                        <i class="fas fa-eye"></i>
-                        Lihat Detail
-                    </a>
+                    <div id="tombol-{{ $lelang->id }}">
+                        <a href="{{ route('public.detail', $lelang->id) }}"
+                            class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                            <i class="fas fa-eye"></i>
+                            Lihat Detail
+                        </a>
+                    </div>
 
                 </div>
             </div>
@@ -452,14 +456,14 @@ function pubUpdateSlide(id, total) {
 }
 
 // ===== COUNTDOWN =====
+const GRACE_PERIOD_DAYS = 2; // card masih tampil N hari setelah berakhir
+
 function updateCountdowns() {
     document.querySelectorAll('.countdown').forEach(el => {
         const end  = new Date(el.dataset.end).getTime();
         const now  = new Date().getTime();
         const diff = end - now;
 
-        // Ambil lelang id dari data attribute atau cari dari child element
-        // Karena bisa banyak countdown di 1 halaman, cari id dari elemen child
         const hariEl   = el.querySelector('[id^="cd-hari-"]');
         const jamEl    = el.querySelector('[id^="cd-jam-"]');
         const menitEl  = el.querySelector('[id^="cd-menit-"]');
@@ -467,18 +471,66 @@ function updateCountdowns() {
 
         if (!hariEl) return;
 
+        // Ambil lelang id dari id element (format: cd-hari-{id})
+        const lelangId = hariEl.id.replace('cd-hari-', '');
+        const tombolEl = document.getElementById('tombol-' + lelangId);
+        const cardEl   = el.closest('[data-lelang-id]');
+
         if (diff <= 0) {
-            hariEl.textContent  = '00';
-            jamEl.textContent   = '00';
-            menitEl.textContent = '00';
-            detikEl.textContent = '00';
-            hariEl.style.color  = '#ef4444';
-            jamEl.style.color   = '#ef4444';
-            menitEl.style.color = '#ef4444';
-            detikEl.style.color = '#ef4444';
+            // Set semua ke 00 merah
+            [hariEl, jamEl, menitEl, detikEl].forEach(e => {
+                if (e) { e.textContent = '00'; e.style.color = '#ef4444'; }
+            });
+
+            // Hitung sudah berapa lama berakhir
+            const expiredMs   = Math.abs(diff);
+            const expiredDays = expiredMs / 86400000;
+
+            if (expiredDays > GRACE_PERIOD_DAYS) {
+                // Sudah lebih dari grace period → sembunyikan card
+                if (cardEl) cardEl.style.display = 'none';
+                return;
+            }
+
+            if (tombolEl && !tombolEl.dataset.updated) {
+                tombolEl.dataset.updated = 'true';
+                const link = tombolEl.querySelector('a');
+                if (link) {
+                    link.className = link.className
+                        .replace('bg-blue-700', 'bg-gray-500')
+                        .replace('hover:bg-blue-800', 'hover:bg-gray-600');
+                    link.innerHTML = `<i class="fas fa-clock"></i> Lihat Detail`;
+                }
+            }
+
+            // Ubah badge LIVE → SELESAI
+            const badgeLive = cardEl?.querySelector('.bg-green-500');
+            if (badgeLive && badgeLive.textContent.includes('LIVE')) {
+                badgeLive.className = badgeLive.className
+                    .replace('bg-green-500', 'bg-gray-400');
+                badgeLive.innerHTML = `
+                    <span class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                    SELESAI
+                `;
+            }
+
+            // Ubah background countdown jadi abu
+            const countdownBox = el.closest('.bg-blue-50');
+            if (countdownBox) {
+                countdownBox.classList.remove('bg-blue-50');
+                countdownBox.classList.add('bg-gray-50');
+                const label = countdownBox.querySelector('.text-blue-500');
+                if (label) {
+                    label.classList.remove('text-blue-500');
+                    label.classList.add('text-gray-400');
+                    label.textContent = '⏱ Lelang Berakhir';
+                }
+            }
+            
             return;
         }
 
+        // Countdown normal
         const d = Math.floor(diff / 86400000);
         const h = Math.floor((diff % 86400000) / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
@@ -488,6 +540,12 @@ function updateCountdowns() {
         jamEl.textContent   = String(h).padStart(2, '0');
         menitEl.textContent = String(m).padStart(2, '0');
         detikEl.textContent = String(s).padStart(2, '0');
+
+        // Warna merah jika sisa < 1 jam
+        const urgent = diff < 3600000;
+        [hariEl, jamEl, menitEl, detikEl].forEach(e => {
+            if (e) e.style.color = urgent ? '#ef4444' : '#1d4ed8';
+        });
     });
 }
 
@@ -498,6 +556,17 @@ updateCountdowns();
 function filterBySatker(satkerId) {
     let countAktif = 0;
     let countMendatang = 0;
+    let countTotal = 0;
+
+    // Filter grid total
+    document.querySelectorAll('#gridLelang > div[data-satker]').forEach(card => {
+        if (!satkerId || card.dataset.satker === satkerId) {
+            card.style.display = '';
+            countTotal++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
 
     // Filter grid aktif
     document.querySelectorAll('#gridLelang > div[data-satker]').forEach(card => {
@@ -523,6 +592,7 @@ function filterBySatker(satkerId) {
     document.getElementById('statAktif').textContent = countAktif;
     document.getElementById('statMendatang').textContent = countMendatang;
     document.getElementById('heroStatAktif').textContent = countAktif;
+    document.getElementById('statTotal').textContent = countTotal;
 
 }
 

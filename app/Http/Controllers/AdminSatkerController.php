@@ -234,22 +234,21 @@ class AdminSatkerController extends Controller
     {
         $this->authorize('update', $pengajuan);
 
-        // Cek status harus draft atau revision
         if (!in_array($pengajuan->status, ['draft', 'revision'])) {
             return back()->with('error', 'Pengajuan tidak dapat dikirim ulang.');
         }
 
-        // Cek dokumen pengajuan wajib lengkap (3 dokumen)
-        $dokumen = $pengajuan->dokumenPengajuan;
+        // Cek dokumen pengajuan wajib lengkap
+        $dokumen      = $pengajuan->dokumenPengajuan;
         $jenisDokumen = $dokumen->pluck('jenis')->toArray();
-        $wajib = ['sk_panitia', 'izin_penjualan', 'surat_penetapan_harga'];
-        $kurang = array_diff($wajib, $jenisDokumen);
+        $wajib        = ['sk_panitia', 'izin_penjualan', 'surat_penetapan_harga'];
+        $kurang       = array_diff($wajib, $jenisDokumen);
 
         if (!empty($kurang)) {
             $label = [
-                'sk_panitia'             => 'SK Panitia',
-                'izin_penjualan'         => 'Izin Penjualan',
-                'surat_penetapan_harga'  => 'Surat Penetapan Harga Limit',
+                'sk_panitia'            => 'SK Panitia',
+                'izin_penjualan'        => 'Izin Penjualan',
+                'surat_penetapan_harga' => 'Surat Penetapan Harga Limit',
             ];
             $kurangLabel = implode(', ', array_map(fn($k) => $label[$k], $kurang));
             return back()->with('error', 'Dokumen belum lengkap: ' . $kurangLabel);
@@ -260,27 +259,60 @@ class AdminSatkerController extends Controller
             return back()->with('error', 'Minimal harus ada 1 data perkara.');
         }
 
-        // Cek setiap perkara punya minimal 1 dokumen perkara
+        // Cek setiap perkara punya minimal 1 dokumen
         $perkaraTanpaDokumen = $pengajuan->perkaras()
             ->whereDoesntHave('dokumenPerkara')
             ->pluck('nomor_perkara');
 
         if ($perkaraTanpaDokumen->isNotEmpty()) {
-            return back()->with('error', 
+            return back()->with('error',
                 'Perkara berikut belum ada dokumennya: ' . $perkaraTanpaDokumen->implode(', '));
         }
 
-        // Cek setiap perkara punya minimal 1 barang
-        $perkaraTanpaBarang = $pengajuan->perkaras()
-            ->whereDoesntHave('barangs')
-            ->pluck('nomor_perkara');
+        // ✅ Cek barang — dengan pengecualian perkara gabungan
+        $perkaras        = $pengajuan->perkaras()->with('barangs')->get();
+        $totalBarangSemua = $perkaras->sum(fn($p) => $p->barangs->count());
 
-        if ($perkaraTanpaBarang->isNotEmpty()) {
-            return back()->with('error', 
-                'Perkara berikut belum ada barangnya: ' . $perkaraTanpaBarang->implode(', '));
+        // Jika tidak ada barang sama sekali → tolak
+        if ($totalBarangSemua === 0) {
+            return back()->with('error', 'Minimal harus ada 1 barang dalam pengajuan.');
         }
 
-        // Semua validasi lolos — submit
+        // Cek perkara yang tidak punya barang
+        $perkaraTanpaBarang = $perkaras->filter(fn($p) => $p->barangs->count() === 0);
+
+        if ($perkaraTanpaBarang->isNotEmpty()) {
+
+            // Cek apakah ada barang gabungan di perkara lain
+            // (barang dengan catatan_internal terisi = barang gabungan)
+            $adaBarangGabungan = $perkaras->some(
+                fn($p) => $p->barangs->some(
+                    fn($b) => !empty($b->catatan_internal)
+                )
+            );
+
+            if (!$adaBarangGabungan) {
+                // Tidak ada barang gabungan → wajib tiap perkara punya barang
+                $nomorPerkara = $perkaraTanpaBarang->pluck('nomor_perkara')->implode(', ');
+                return back()->with('error',
+                    'Perkara berikut belum ada barangnya: ' . $nomorPerkara .
+                    '. Jika barang merupakan gabungan perakra lain, isi kolom Catatan Internal pada barang tersebut.');
+            }
+
+            // Ada barang gabungan → izinkan submit tapi beri warning
+            $pengajuan->update([
+                'status'            => 'submitted',
+                'tanggal_pengajuan' => now(),
+                'catatan_revisi'    => $pengajuan->catatan_revisi, // preserve riwayat
+            ]);
+
+            return back()->with('success',
+                'Pengajuan berhasil dikirim. Catatan: ' .
+                $perkaraTanpaBarang->count() .
+                ' perkara tidak memiliki barang tersendiri (diasumsikan barang gabungan).');
+        }
+
+        // Semua perkara punya barang → submit normal
         $pengajuan->update([
             'status'            => 'submitted',
             'tanggal_pengajuan' => now(),
