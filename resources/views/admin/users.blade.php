@@ -59,7 +59,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table id="tabelUsers" class="table table-hover mb-0">
                     <thead style="background: #f8fff9;">
                         <tr>
                             <th class="border-0 pl-4" style="color: #1a6b3c; font-size: 0.82rem;">No</th>
@@ -113,7 +113,7 @@
                                 </span>
                             </td>
 
-                            <td class="align-middle text-muted small">
+                            <td class="align-middle text-muted small" data-sort="{{ $user->created_at }}">
                                 {{ $user->created_at->format('d M Y') }}
                             </td>
 
@@ -420,3 +420,15 @@
 </div>
 
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    LapauTable.init('tabelUsers', {
+        pageSize: 10,
+        sortDir: 'desc'
+    });
+
+});
+</script>
+@endpush

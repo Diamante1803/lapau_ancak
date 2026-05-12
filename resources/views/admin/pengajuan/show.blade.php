@@ -62,13 +62,20 @@
                 <div class="d-flex flex-wrap gap-2" style="gap: 8px;">
 
                     {{-- APPROVE --}}
-                    <form method="POST" action="{{ route('admin.pengajuan.approve', $pengajuan->id) }}">
+                    <form method="POST" action="{{ route('admin.pengajuan.approve', $pengajuan->id) }}"
+                        id="formApprove-{{ $pengajuan->id }}">
                         @csrf
-                        <button class="btn btn-sm font-weight-bold shadow-sm"
-                            style="background: #1a6b3c; color: white; border-radius: 8px; padding: 6px 16px;"
+                        <button type="button" class="btn btn-sm font-weight-bold shadow-sm"
+                            style="background:#1a6b3c;color:white;border-radius:8px;padding:6px 16px;"
                             onmouseover="this.style.background='#145c32'"
                             onmouseout="this.style.background='#1a6b3c'"
-                            onclick="return confirm('Setujui pengajuan ini?')">
+                            onclick="swalSubmitForm('formApprove-{{ $pengajuan->id }}', {
+                                title: 'Setujui Pengajuan?',
+                                text: 'Pengajuan ini akan disetujui dan tidak bisa dibatalkan.',
+                                icon: 'question',
+                                confirmText: 'Ya, Setujui',
+                                confirmColor: '#1a6b3c'
+                            })">
                             <i class="fas fa-check-circle mr-1"></i> Setujui
                         </button>
                     </form>
@@ -83,13 +90,20 @@
                     </button>
 
                     {{-- DELETE --}}
-                    <form method="POST" action="{{ route('admin.pengajuan.destroy', $pengajuan->id) }}">
+                    <form method="POST" action="{{ route('admin.pengajuan.destroy', $pengajuan->id) }}"
+                        id="formHapus-{{ $pengajuan->id }}">
                         @csrf @method('DELETE')
-                        <button class="btn btn-sm font-weight-bold shadow-sm"
-                            style="background: #e74a3b; color: white; border-radius: 8px; padding: 6px 16px;"
+                        <button type="button" class="btn btn-sm font-weight-bold shadow-sm"
+                            style="background:#e74a3b;color:white;border-radius:8px;padding:6px 16px;"
                             onmouseover="this.style.background='#c0392b'"
                             onmouseout="this.style.background='#e74a3b'"
-                            onclick="return confirm('Hapus pengajuan ini? Tindakan ini tidak dapat dibatalkan.')">
+                            onclick="swalSubmitForm('formHapus-{{ $pengajuan->id }}', {
+                                title: 'Hapus Pengajuan?',
+                                text: 'Tindakan ini tidak dapat dibatalkan dan semua data terkait akan ikut terhapus.',
+                                icon: 'warning',
+                                confirmText: 'Ya, Hapus',
+                                confirmColor: '#e74a3b'
+                            })">
                             <i class="fas fa-trash mr-1"></i> Hapus
                         </button>
                     </form>
@@ -187,43 +201,42 @@
                     </div>
 
                     <div class="card-body p-0">
-                        @foreach(array_reverse($pengajuan->catatan_revisi) as $idx => $revisi)
-                        <div class="px-4 py-3 {{ $idx > 0 ? 'border-top' : '' }}"
-                            style="{{ $idx == 0 ? 'background: #fffdf0;' : 'background: white;' }}">
+                        <div class="d-flex overflow-auto" style="gap:0;">
+                            @foreach($pengajuan->catatan_revisi as $idx => $revisi)
+                            <div class="flex-shrink-0 px-4 py-3"
+                                style="min-width:220px; max-width:260px; border-right:1px solid #f0e6c8;
+                                    {{ $idx == count($pengajuan->catatan_revisi) - 1 ? 'background:#fffdf0;' : 'background:white;' }}">
 
-                            <div class="d-flex align-items-start" style="gap: 12px;">
-
-                                {{-- Badge revisi ke- --}}
-                                <div style="
-                                    min-width: 32px; height: 32px; border-radius: 50%;
-                                    background: {{ $idx == 0 ? '#f6c90e' : '#e9ecef' }};
-                                    color: {{ $idx == 0 ? '#856404' : '#6c757d' }};
-                                    display: flex; align-items: center; justify-content: center;
-                                    font-weight: bold; font-size: 0.75rem; flex-shrink: 0;">
-                                    {{ $revisi['ke_revisi'] }}
-                                </div>
-
-                                <div>
-                                    <div class="font-weight-bold small mb-1" style="color: #856404;">
+                                <div class="d-flex align-items-center mb-2" style="gap:8px;">
+                                    <div style="
+                                        width:28px; height:28px; border-radius:50%; flex-shrink:0;
+                                        background:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#f6c90e' : '#e9ecef' }};
+                                        color:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#856404' : '#6c757d' }};
+                                        display:flex; align-items:center; justify-content:center;
+                                        font-weight:bold; font-size:0.72rem;">
+                                        {{ $revisi['ke_revisi'] }}
+                                    </div>
+                                    <div class="font-weight-bold small" style="color:#856404;">
                                         Revisi ke-{{ $revisi['ke_revisi'] }}
-                                        @if($idx == 0)
-                                        <span class="badge badge-warning ml-1" style="font-size: 0.65rem; border-radius: 20px;">
+                                        @if($idx == count($pengajuan->catatan_revisi) - 1)
+                                        <span class="badge badge-warning ml-1" style="font-size:0.62rem;border-radius:20px;">
                                             Terbaru
                                         </span>
                                         @endif
                                     </div>
-                                    <p class="mb-1 small" style="color: #4a4a4a;">
-                                        {{ $revisi['catatan'] }}
-                                    </p>
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
-                                    </small>
                                 </div>
 
+                                <p class="mb-1 small" style="color:#4a4a4a; font-size:0.82rem; line-height:1.4;">
+                                    {{ $revisi['catatan'] }}
+                                </p>
+                                <small class="text-muted" style="font-size:0.72rem;">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
+                                </small>
+
                             </div>
+                            @endforeach
                         </div>
-                        @endforeach
                     </div>
 
                 </div>
@@ -628,7 +641,7 @@
 
     <div class="card shadow mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
         <div class="card-header d-flex align-items-center"
-            style="background: linear-gradient(90deg, #f6c90e, #e0b800); padding: 14px 20px;">
+            style="background: linear-gradient(90deg, #f9d100 0%, #e08c00 100%); padding: 14px 20px;">
             <i class="fas fa-boxes mr-2" style="color: #1a6b3c;"></i>
             <span class="font-weight-bold" style="color: #1a6b3c;">
                 Barang — Perkara {{ $perkara->nama_tersangka }}
@@ -771,15 +784,15 @@
             {{-- Tabel Barang --}}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead style="background: #f8fff9;">
+                    <thead style="background: linear-gradient(90deg, #1a6b3c, #145c32);">
                         <tr>
-                            <th style="color: #1a6b3c; border-top: none;">Nama</th>
-                            <th style="color: #1a6b3c; border-top: none;">Harga Limit</th>
-                            <th style="color: #1a6b3c; border-top: none;">Deskripsi</th>
-                            <th style="color: #1a6b3c; border-top: none;">Catatan Internal</th>
-                            <th style="color: #1a6b3c; border-top: none;">Foto Barang</th>
+                            <th style="color: white; border-top: none;">Nama</th>
+                            <th style="color: white; border-top: none;">Harga Limit</th>
+                            <th style="color: white; border-top: none;">Deskripsi</th>
+                            <th style="color: white; border-top: none;">Catatan Internal</th>
+                            <th style="color: white; border-top: none;">Foto Barang</th>
                             @if($canEditSatker)
-                            <th style="color: #1a6b3c; border-top: none;" width="120">Aksi</th>
+                            <th style="color: white; border-top: none;" width="120">Aksi</th>
                             @endif
                         </tr>
                     </thead>
@@ -898,7 +911,7 @@
                 <div class="modal-dialog">
                     <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
                         <div class="modal-header"
-                            style="background: linear-gradient(90deg, #f6c90e, #e0b800);">
+                            style="background: linear-gradient(90deg, #f6c90e 0%, #f0a500 100%); padding: 14px 20px;">
                             <h5 class="modal-title font-weight-bold" style="color: #1a6b3c;">
                                 <i class="fas fa-edit mr-2"></i>Edit Barang
                             </h5>
@@ -1020,24 +1033,6 @@
     </div>
 </div>
 
-{{-- ================= MODAL PREVIEW DOKUMEN ================= --}}
-<div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
-            <div class="modal-header" style="background: linear-gradient(90deg, #1a6b3c, #145c32);">
-                <h5 class="modal-title text-white font-weight-bold" id="modalTitle">
-                    <i class="fas fa-eye mr-2" style="color: #f6c90e;"></i>Preview
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body text-center" style="background: #f8fff9;">
-                <iframe id="previewFrame" width="100%" height="500px" style="display:none; border-radius: 8px;"></iframe>
-                <img id="previewImage" src="" style="max-width:100%; display:none; border-radius: 8px;" />
-            </div>
-        </div>
-    </div>
-</div>
-
 {{-- ================= MODAL EDIT PERKARA ================= --}}
 @foreach($pengajuan->perkaras as $p)
 <div class="modal fade" id="editPerkara{{ $p->id }}" tabindex="-1">
@@ -1149,19 +1144,6 @@
 
 {{-- ================= SCRIPTS ================= --}}
 <script>
-// Preview dokumen
-function previewDokumen(url, nama) {
-    let img   = document.getElementById('previewImage');
-    let frame = document.getElementById('previewFrame');
-    let title = document.getElementById('modalTitle');
-    title.innerHTML = '<i class="fas fa-eye mr-2" style="color:#f6c90e;"></i>' + (nama ?? 'Dokumen');
-    if (url.match(/\.(jpeg|jpg|png)$/i)) {
-        img.src = url; img.style.display = 'block'; frame.style.display = 'none';
-    } else {
-        frame.src = url; frame.style.display = 'block'; img.style.display = 'none';
-    }
-    $('#previewModal').modal('show');
-}
 
 // Validasi upload file pengajuan
 document.querySelector('input[name="file[]"]').addEventListener('change', function() {
@@ -1248,25 +1230,6 @@ document.addEventListener('change', function(e) {
     if (file.size > MAX_SIZE) { tampilErrorEdit(id, `"${file.name}" melebihi 2MB.`); e.target.value = ''; }
 });
 
-function validateHargaLimit(input) {
-    const maxLimit = 35000000;
-    const msg = document.getElementById('harga-limit-msg');
-
-    if (input.value > maxLimit) {
-        input.value = maxLimit;
-        msg.textContent = 'Harga limit maksimal Rp 35.000.000';
-        msg.style.display = 'block';
-        setTimeout(() => msg.style.display = 'none', 4000);
-    } else if (input.value <= 0 || input.value === '') {
-        input.value = '';
-        msg.textContent = 'Harga limit tidak boleh kosong atau 0';
-        msg.style.display = 'block';
-        setTimeout(() => msg.style.display = 'none', 4000);
-    } else {
-        msg.style.display = 'none';
-    }
-}
-
 @if($errors->any() && old('perkara_id'))
     $(document).ready(function() {
         const perkaraId = "{{ old('perkara_id') }}";
@@ -1305,25 +1268,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-
-<style>
-.photo-delete {
-    opacity: 0;
-    transition: 0.2s;
-    background: rgba(231,74,59,0.85);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 14px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.photo-box:hover .photo-delete { opacity: 1; }
-</style>
 
 @endsection

@@ -34,40 +34,40 @@
 {{-- STATISTIK --}}
 <div class="row mb-4">
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100" style="border-radius:12px; border:none; background: linear-gradient(135deg,#1a6b3c,#2ecc71);">
+        <div class="card shadow-sm h-100" style="border-radius:12px; border:1px solid #d4edda;">
             <div class="card-body d-flex align-items-center py-3">
-                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
-                    <i class="fas fa-building" style="color:white;font-size:1.1rem;"></i>
+                <div style="width:46px;height:46px;border-radius:10px;background:#e8f5ee;display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
+                    <i class="fas fa-building" style="color:#1a6b3c;font-size:1.1rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.6rem;font-weight:700;color:white;line-height:1;">{{ $totalSatker }}</div>
-                    <div style="font-size:0.78rem;color:rgba(255,255,255,0.85);">Total Satker</div>
+                    <div style="font-size:1.6rem;font-weight:700;color:#1a6b3c;line-height:1;">{{ $totalSatker }}</div>
+                    <div style="font-size:0.78rem;color:#6c757d;">Total Satker</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100" style="border-radius:12px; border:none; background: linear-gradient(135deg,#f6c90e,#f39c12);">
+        <div class="card shadow-sm h-100" style="border-radius:12px; border:1px solid #ffeeba;">
             <div class="card-body d-flex align-items-center py-3">
-                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
-                    <i class="fas fa-user-check" style="color:white;font-size:1.1rem;"></i>
+                <div style="width:46px;height:46px;border-radius:10px;background:#fff8e1;display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
+                    <i class="fas fa-user-check" style="color:#f39c12;font-size:1.1rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.6rem;font-weight:700;color:white;line-height:1;">{{ $denganPJ }}</div>
-                    <div style="font-size:0.78rem;color:rgba(255,255,255,0.85);">Memiliki Penanggung Jawab</div>
+                    <div style="font-size:1.6rem;font-weight:700;color:#856404;line-height:1;">{{ $denganPJ }}</div>
+                    <div style="font-size:0.78rem;color:#6c757d;">Memiliki Penanggung Jawab</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100" style="border-radius:12px; border:none; background: linear-gradient(135deg,#c0392b,#e74c3c);">
+        <div class="card shadow-sm h-100" style="border-radius:12px; border:1px solid #f5c6cb;">
             <div class="card-body d-flex align-items-center py-3">
-                <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
-                    <i class="fas fa-user-times" style="color:white;font-size:1.1rem;"></i>
+                <div style="width:46px;height:46px;border-radius:10px;background:#fde8e8;display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
+                    <i class="fas fa-user-times" style="color:#c0392b;font-size:1.1rem;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1.6rem;font-weight:700;color:white;line-height:1;">{{ $tanpaPJ }}</div>
-                    <div style="font-size:0.78rem;color:rgba(255,255,255,0.85);">Belum Ada Penanggung Jawab</div>
+                    <div style="font-size:1.6rem;font-weight:700;color:#c0392b;line-height:1;">{{ $tanpaPJ }}</div>
+                    <div style="font-size:0.78rem;color:#6c757d;">Belum Ada Penanggung Jawab</div>
                 </div>
             </div>
         </div>
@@ -101,7 +101,7 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0" style="font-size:0.875rem;">
+            <table id="tabelSatker" class="table table-hover mb-0" style="font-size:0.875rem;">
                 <thead style="background:#f8f9fa;">
                     <tr>
                         <th class="border-0 pl-4" style="width:50px;color:#6c757d;font-weight:600;font-size:0.78rem;padding:12px 16px;">#</th>
@@ -319,3 +319,15 @@
 </div>
 
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    LapauTable.init('tabelSatker', {
+        pageSize: 10,
+        sortDir: 'desc'
+    });
+
+});
+</script>
+@endpush

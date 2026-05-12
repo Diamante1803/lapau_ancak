@@ -350,5 +350,38 @@ class LelangController extends Controller
             'Admin Pusat akan menjadwalkan lelang baru.');
     }
 
+    public function hapusPenawaranTertinggi(Lelang $lelang)
+    {
+        // Ambil penawaran tertinggi
+        $tertinggi = $lelang->penawarans()
+            ->orderByDesc('nilai_penawaran')
+            ->first();
+
+        if (!$tertinggi) {
+            return back()->with('error', 'Tidak ada penawaran untuk dihapus.');
+        }
+
+        $namaPembeli = $tertinggi->pembeli->nama ?? '-';
+        $nilaiHapus  = number_format($tertinggi->nilai_penawaran, 0, ',', '.');
+
+        // Hapus penawaran tertinggi
+        $tertinggi->delete();
+
+        // Update harga_tertinggi di tabel lelang ke penawaran berikutnya
+        $berikutnya = $lelang->penawarans()
+            ->orderByDesc('nilai_penawaran')
+            ->first();
+
+        $lelang->update([
+            'harga_tertinggi' => $berikutnya?->nilai_penawaran ?? null,
+            'pemenang_id'     => $berikutnya?->pembeli_id ?? null,
+        ]);
+
+        return back()->with('success', 
+            "Penawaran Rp {$nilaiHapus} oleh {$namaPembeli} berhasil dihapus. " .
+            ($berikutnya ? "Pemenang sementara sekarang: " . ($berikutnya->pembeli->nama ?? '-') : "Belum ada penawar.")
+        );
+    }
+
 
 }

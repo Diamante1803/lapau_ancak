@@ -49,31 +49,53 @@ class AdminSatkerController extends Controller
         return view('admin.pengajuan.index', compact('pengajuans'));
     }
 
-    // =========================
-    // FORM CREATE
-    // =========================
+    private function stepStatus(PengajuanLelang $pengajuan): array
+    {
+        $dokumen      = $pengajuan->dokumenPengajuan->pluck('jenis')->toArray();
+        $wajib        = ['sk_panitia', 'izin_penjualan', 'surat_penetapan_harga'];
+        $step1Lengkap = !empty($pengajuan->judul_pengajuan)
+                        && empty(array_diff($wajib, $dokumen));
+    
+        $perkaras           = $pengajuan->perkaras()->with(['dokumenPerkara', 'barangs'])->get();
+        $step2Lengkap       = $step1Lengkap
+                            && $perkaras->count() > 0
+                            && $perkaras->every(fn($p) => $p->dokumenPerkara->count() > 0);
+    
+        $totalBarang  = $perkaras->sum(fn($p) => $p->barangs->count());
+        $step3Lengkap = $step2Lengkap && $totalBarang > 0;
+    
+        return [
+            1 => $step1Lengkap,
+            2 => $step2Lengkap,
+            3 => $step3Lengkap,
+        ];
+    }
+    
+    // ============================================================
+    // WIZARD — CREATE (redirect ke step 1 pengajuan baru)
+    // ============================================================
+    
     public function create()
     {
-        return view('admin_satker.pengajuan.create');
+        return view('admin_satker.pengajuan.wizard.step1-create');
     }
-
-    // =========================
-    // STORE
-    // =========================
+    
     public function store(Request $request)
     {
         $request->validate([
-        'judul_pengajuan' => 'required'
+            'judul_pengajuan' => 'required|string|max:255',
+        ], [
+            'judul_pengajuan.required' => 'Judul pengajuan tidak boleh kosong.',
         ]);
-
+    
         $pengajuan = PengajuanLelang::create([
-            'satker_id' => auth()->user()->satker_id,
+            'satker_id'       => auth()->user()->satker_id,
             'judul_pengajuan' => $request->judul_pengajuan,
-            'status' => 'draft'
+            'status'          => 'draft',
         ]);
-
-        return redirect()->route('satker.pengajuan.show', $pengajuan)
-            ->with('success', 'Pengajuan berhasil dibuat');
+    
+        return redirect()->route('satker.pengajuan.step1', $pengajuan)
+            ->with('success', 'Pengajuan berhasil dibuat. Lengkapi dokumen pengajuan.');
     }
 
     public function uploadDokumenPengajuan(Request $request, PengajuanLelang $pengajuan)
@@ -147,15 +169,7 @@ class AdminSatkerController extends Controller
 
         return view('admin.pengajuan.show', compact('pengajuan'));
     }
-
-    // =========================
-    // EDIT
-    // =========================
-    public function edit(PengajuanLelang $pengajuan)
-    {
-        return view('admin_satker.pengajuan.edit', compact('pengajuan'));
-    }
-
+    
     // =========================
     // UPDATE
     // =========================
@@ -177,7 +191,7 @@ class AdminSatkerController extends Controller
     public function destroy(PengajuanLelang $pengajuan)
     {
         $pengajuan->load([
-            'dokumen',
+            'dokumenPengajuan',
             'perkaras.dokumenPerkaras',
             'perkaras.barangs.FotoBarangs'
         ]);
@@ -223,8 +237,7 @@ class AdminSatkerController extends Controller
             $pengajuan->delete();
         });
 
-        return redirect()->route('admin.pengajuan.index')
-            ->with('success', 'Pengajuan dan semua dokumen berhasil dihapus');
+        return back()->with('success', 'Pengajuan dan semua dokumen berhasil dihapus');
     }
 
     // =========================
@@ -296,7 +309,7 @@ class AdminSatkerController extends Controller
                 $nomorPerkara = $perkaraTanpaBarang->pluck('nomor_perkara')->implode(', ');
                 return back()->with('error',
                     'Perkara berikut belum ada barangnya: ' . $nomorPerkara .
-                    '. Jika barang merupakan gabungan perakra lain, isi kolom Catatan Internal pada barang tersebut.');
+                    '. Jika barang merupakan gabungan perkara lain, isi kolom Catatan Internal pada barang tersebut.');
             }
 
             // Ada barang gabungan → izinkan submit tapi beri warning
@@ -319,6 +332,140 @@ class AdminSatkerController extends Controller
         ]);
 
         return back()->with('success', 'Pengajuan berhasil dikirim ke Admin Pusat.');
+    }
+
+    // ============================================================
+    // STEP 1 — Info Pengajuan & Dokumen
+    // ============================================================
+    
+    public function step1(PengajuanLelang $pengajuan)
+    {
+        $this->authorize('view', $pengajuan);
+    
+        $pengajuan->load('dokumenPengajuan');
+        $steps = $this->stepStatus($pengajuan);
+    
+        return view('admin.pengajuan.wizard.step1', compact('pengajuan', 'steps'));
+    }
+    
+    public function saveStep1(Request $request, PengajuanLelang $pengajuan)
+    {
+        $this->authorize('update', $pengajuan);
+    
+        $request->validate([
+            'judul_pengajuan' => 'required|string|max:255',
+        ], [
+            'judul_pengajuan.required' => 'Judul pengajuan tidak boleh kosong.',
+        ]);
+    
+        $pengajuan->update([
+            'judul_pengajuan' => $request->judul_pengajuan,
+        ]);
+    
+        // Cek apakah step 1 sudah lengkap untuk navigasi otomatis
+        $steps = $this->stepStatus($pengajuan->fresh(['dokumenPengajuan']));
+    
+        if ($steps[1]) {
+            return redirect()->route('satker.pengajuan.step2', $pengajuan)
+                ->with('success', 'Info pengajuan disimpan. Lanjut ke Perkara.');
+        }
+    
+        return back()->with('success', 'Judul pengajuan berhasil disimpan. Lengkapi dokumen untuk melanjutkan.');
+    }
+    
+    // ============================================================
+    // STEP 2 — Perkara & Dokumen Perkara
+    // ============================================================
+    
+    public function step2(PengajuanLelang $pengajuan)
+    {
+        $this->authorize('view', $pengajuan);
+    
+        // Guard: step 1 harus lengkap dulu
+        $steps = $this->stepStatus($pengajuan->load('dokumenPengajuan'));
+        if (!$steps[1]) {
+            return redirect()->route('satker.pengajuan.step1', $pengajuan)
+                ->with('error', 'Lengkapi info dan dokumen pengajuan terlebih dahulu.');
+        }
+    
+        $pengajuan->load([
+            'perkaras.dokumenPerkara',
+            'perkaras.barangs',
+        ]);
+    
+        return view('admin.pengajuan.wizard.step2', compact('pengajuan', 'steps'));
+    }
+    
+    public function saveStep2(Request $request, PengajuanLelang $pengajuan)
+    {
+        // Ganti authorize dengan pengecekan manual
+        $user = auth()->user();
+
+        if ($user->role === 'admin_satker' && $user->satker_id !== $pengajuan->satker_id) {
+            abort(403, 'Anda tidak memiliki akses ke pengajuan ini.');
+        }
+
+        // Step 2 tidak ada form khusus
+        $pengajuan->load(['dokumenPengajuan', 'perkaras.dokumenPerkara', 'perkaras.barangs']);
+        $steps = $this->stepStatus($pengajuan);
+
+        if (!$steps[2]) {
+            return back()->with('error', 'Pastikan minimal ada 1 perkara dan setiap perkara memiliki dokumen.');
+        }
+
+        return redirect()->route('satker.pengajuan.step3', $pengajuan)
+            ->with('success', 'Lanjut ke input barang.');
+    }
+    
+    // ============================================================
+    // STEP 3 — Barang & Foto
+    // ============================================================
+    
+    public function step3(PengajuanLelang $pengajuan)
+    {
+        $this->authorize('view', $pengajuan);
+    
+        // Guard: step 2 harus lengkap dulu
+        $pengajuan->load(['dokumenPengajuan', 'perkaras.dokumenPerkara', 'perkaras.barangs']);
+        $steps = $this->stepStatus($pengajuan);
+    
+        if (!$steps[2]) {
+            return redirect()->route('satker.pengajuan.step2', $pengajuan)
+                ->with('error', 'Lengkapi data perkara terlebih dahulu.');
+        }
+    
+        $pengajuan->load([
+            'perkaras.barangs.fotoBarang',
+            'perkaras.dokumenPerkara',
+        ]);
+    
+        $canEditSatker = in_array($pengajuan->status, ['draft', 'revision']);
+    
+        return view('admin.pengajuan.wizard.step3', compact('pengajuan', 'steps', 'canEditSatker'));
+    }
+    
+    // ============================================================
+    // STEP 4 — Review & Submit
+    // ============================================================
+    
+    public function step4(PengajuanLelang $pengajuan)
+    {
+        $this->authorize('view', $pengajuan);
+    
+        // Guard: step 3 harus lengkap dulu
+        $pengajuan->load([
+            'dokumenPengajuan',
+            'perkaras.dokumenPerkara',
+            'perkaras.barangs.fotoBarang',
+        ]);
+        $steps = $this->stepStatus($pengajuan);
+    
+        if (!$steps[3]) {
+            return redirect()->route('satker.pengajuan.step3', $pengajuan)
+                ->with('error', 'Pastikan minimal ada 1 barang dalam pengajuan.');
+        }
+    
+        return view('admin.pengajuan.wizard.step4', compact('pengajuan', 'steps'));
     }
 
 }

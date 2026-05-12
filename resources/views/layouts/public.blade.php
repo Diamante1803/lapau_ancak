@@ -12,7 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Font Awesome -->
-    <link href="{{ asset('template/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
     <style>
         .line-clamp-2 {
@@ -45,17 +45,46 @@
                     class="text-sm text-blue-200 hover:text-white transition">
                     Beranda
                 </a>
-                <a href="#"
+                <!-- <a href="#"
                     class="text-sm text-blue-200 hover:text-white transition">
                     Lelang
-                </a>
+                </a> -->
 
-                {{-- Tombol Login Admin --}}
-                <a href="{{ route('login') }}"
-                    class="bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold px-3 py-1.5 rounded-lg text-sm transition"
-                    title="Login Admin">
-                    🔐
-                </a>
+                {{-- Tombol Login Admin (hidden toggle) --}}
+                <div class="relative">
+                    <button onclick="toggleLoginBtn()"
+                        class="text-gray-300 hover:text-white transition text-xs px-2 py-1 rounded"
+                        title="Admin">
+                        <i class="fas fa-chevron-down" id="icon-login-toggle"></i>
+                    </button>
+                    <div id="login-btn-wrapper" style="display:none;"
+                        class="absolute right-0 mt-1 z-50">
+                        <a href="{{ route('login') }}"
+                            class="bg-white hover:bg-blue-300 text-blue-900 font-bold px-3 py-1.5 rounded-lg text-sm transition whitespace-nowrap"
+                            title="Login Admin">
+                            🔐
+                        </a>
+                    </div>
+                </div>
+
+                <script>
+                function toggleLoginBtn() {
+                    const wrapper = document.getElementById('login-btn-wrapper');
+                    const icon    = document.getElementById('icon-login-toggle');
+                    const isHidden = wrapper.style.display === 'none';
+                    wrapper.style.display = isHidden ? 'block' : 'none';
+                    icon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+                }
+
+                // Klik di luar → tutup
+                document.addEventListener('click', function (e) {
+                    const wrapper = document.getElementById('login-btn-wrapper');
+                    if (!e.target.closest('.relative')) {
+                        wrapper.style.display = 'none';
+                        document.getElementById('icon-login-toggle').className = 'fas fa-chevron-down';
+                    }
+                });
+                </script>
             </div>
 
         </div>

@@ -234,45 +234,43 @@
         <div class="row mb-4">
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 text-center" style="border-radius: 12px; border: none; background: linear-gradient(135deg, #1a6b3c, #2ecc71);">
+                <div class="card shadow-sm h-100 text-center" style="border-radius:12px; border:1px solid #d4edda;">
                     <div class="card-body py-3">
-                        <div style="font-size:1.6rem; font-weight:700; color:white;">
+                        <div style="font-size:1.6rem; font-weight:700; color:#1a6b3c; line-height:1;">
                             {{ $penawarans->count() }}
                         </div>
-                        <div style="font-size:0.78rem; color:rgba(255,255,255,0.85);">Total Penawar</div>
+                        <div style="font-size:0.78rem; color:#6c757d; margin-top:4px;">Total Penawar</div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 text-center" style="border-radius: 12px; border: none; background: linear-gradient(135deg, #f6c90e, #f39c12);">
+                <div class="card shadow-sm h-100 text-center" style="border-radius:12px; border:1px solid #ffeeba;">
                     <div class="card-body py-3">
-                        <div style="font-size:1.1rem; font-weight:700; color:white;">
+                        <div style="font-size:1.1rem; font-weight:700; color:#856404; line-height:1.3;">
                             @if($topPenawaran)
                                 Rp {{ number_format($topPenawaran->nilai_penawaran, 0, ',', '.') }}
                             @else
-                                —
+                                <span class="text-muted">—</span>
                             @endif
                         </div>
-                        <div style="font-size:0.78rem; color:rgba(255,255,255,0.85);">Penawaran Tertinggi</div>
+                        <div style="font-size:0.78rem; color:#6c757d; margin-top:4px;">Penawaran Tertinggi</div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4 mb-3">
-                <div class="card shadow-sm h-100 text-center" style="border-radius: 12px; border: none; background: linear-gradient(135deg, #c0392b, #e74c3c);">
+                <div class="card shadow-sm h-100 text-center" style="border-radius:12px; border:1px solid #f5c6cb;">
                     <div class="card-body py-3">
-                        <div style="font-size:1.1rem; font-weight:700; color:white;">
+                        <div style="font-size:1.1rem; font-weight:700; color:#c0392b; line-height:1.3;">
                             @if($penawarans->count() > 0)
-                                @php
-                                    $selisih = $topPenawaran->nilai_penawaran - $barang->harga_awal;
-                                @endphp
+                                @php $selisih = $topPenawaran->nilai_penawaran - $barang->harga_awal; @endphp
                                 +Rp {{ number_format($selisih, 0, ',', '.') }}
                             @else
-                                —
+                                <span class="text-muted">—</span>
                             @endif
                         </div>
-                        <div style="font-size:0.78rem; color:rgba(255,255,255,0.85);">Selisih dari Harga Awal</div>
+                        <div style="font-size:0.78rem; color:#6c757d; margin-top:4px;">Selisih dari Harga Awal</div>
                     </div>
                 </div>
             </div>
@@ -292,106 +290,142 @@
             </div>
             <div class="card-body p-0">
 
-                @if($penawarans->count() > 0)
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" style="font-size: 0.875rem;">
-                        <thead style="background: #f8f9fa;">
-                            <tr>
-                                <th class="border-0 pl-4" style="width: 50px; color: #6c757d; font-weight:600; font-size:0.78rem;">#</th>
-                                <th class="border-0" style="color: #6c757d; font-weight:600; font-size:0.78rem;">PENAWAR</th>
-                                <th class="border-0" style="color: #6c757d; font-weight:600; font-size:0.78rem;">NILAI PENAWARAN</th>
-                                <th class="border-0" style="color: #6c757d; font-weight:600; font-size:0.78rem;">WAKTU</th>
-                                <th class="border-0" style="color: #6c757d; font-weight:600; font-size:0.78rem;">STATUS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($penawarans as $rank => $penawaran)
-                            @php
-                                $isTop = $rank === 0;
-                            @endphp
-                            <tr style="{{ $isTop ? 'background: #f0fff4;' : '' }}">
-
-                                {{-- RANK --}}
-                                <td class="pl-4 align-middle">
-                                    @if($rank === 0)
-                                        <span style="background:#f6c90e;color:#5a4000;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;">
-                                            <i class="fas fa-trophy"></i>
-                                        </span>
-                                    @elseif($rank === 1)
-                                        <span style="background:#e0e0e0;color:#555;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">2</span>
-                                    @elseif($rank === 2)
-                                        <span style="background:#f4a460;color:#fff;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">3</span>
-                                    @else
-                                        <span class="text-muted" style="font-size:0.82rem; padding-left:6px;">{{ $rank + 1 }}</span>
+                {{-- Wrapper selalu ada agar polling bisa inject --}}
+                <div id="list-penawaran">
+                    @if($penawarans->count() > 0)
+                    <div class="table-responsive">
+                        <table id="tabelPenawaran" class="table table-hover mb-0" style="font-size:0.875rem; width:100%;">
+                            <thead style="background:#f8f9fa;">
+                                <tr>
+                                    <th class="border-0 pl-4" style="width:50px;color:#6c757d;font-weight:600;font-size:0.78rem;" data-no-sort>NO</th>
+                                    <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">PENAWAR</th>
+                                    <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">NILAI PENAWARAN</th>
+                                    <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">WAKTU</th>
+                                    <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">STATUS</th>
+                                    @if(auth()->user()->role === 'admin_pusat' && $lelang->status === 'active')
+                                    <th class="border-0 text-center" style="color:#6c757d;font-weight:600;font-size:0.78rem;">AKSI</th>
                                     @endif
-                                </td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($penawarans as $rank => $penawaran)
+                                @php $isTop = $rank === 0; @endphp
+                                <tr style="{{ $isTop ? 'background:#f0fff4;' : '' }}">
 
-                                {{-- PENAWAR --}}
-                                <td class="align-middle">
-                                    <div class="d-flex align-items-center">
-                                        <div style="width:34px;height:34px;border-radius:50%;background:{{ $isTop ? '#1a6b3c' : '#dee2e6' }};display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0;">
-                                            <i class="fas fa-user" style="color:{{ $isTop ? 'white' : '#6c757d' }};font-size:0.8rem;"></i>
-                                        </div>
-                                        <div>
-                                            <div class="font-weight-bold" style="color:#2d3748; font-size:0.875rem;">
-                                                {{ $penawaran->pembeli->nama ?? 'Anonim' }}
+                                    {{-- RANK --}}
+                                    <td class="pl-4 align-middle">
+                                        @if($rank === 0)
+                                            <span style="background:#f6c90e;color:#5a4000;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;">
+                                                <i class="fas fa-trophy"></i>
+                                            </span>
+                                        @elseif($rank === 1)
+                                            <span style="background:#e0e0e0;color:#555;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">2</span>
+                                        @elseif($rank === 2)
+                                            <span style="background:#f4a460;color:#fff;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;">3</span>
+                                        @else
+                                            <span class="text-muted" style="font-size:0.82rem;padding-left:6px;">{{ $rank + 1 }}</span>
+                                        @endif
+                                    </td>
+
+                                    {{-- PENAWAR --}}
+                                    <td class="align-middle" data-sort="{{ strtolower($penawaran->pembeli->nama ?? 'anonim') }}">
+                                        <div class="d-flex align-items-center">
+                                            <div style="width:34px;height:34px;border-radius:50%;background:{{ $isTop ? '#1a6b3c' : '#dee2e6' }};display:flex;align-items:center;justify-content:center;margin-right:10px;flex-shrink:0;">
+                                                <i class="fas fa-user" style="color:{{ $isTop ? 'white' : '#6c757d' }};font-size:0.8rem;"></i>
                                             </div>
-                                            <div class="text-muted" style="font-size:0.75rem;">
-                                                {{ $penawaran->pembeli->email ?? '-' }}
+                                            <div>
+                                                <div class="font-weight-bold" style="color:#2d3748;font-size:0.875rem;">
+                                                    {{ $penawaran->pembeli->nama ?? 'Anonim' }}
+                                                </div>
+                                                <div class="text-muted" style="font-size:0.75rem;">
+                                                    {{ $penawaran->pembeli->email ?? '-' }}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </td>
+                                    </td>
 
-                                {{-- NILAI --}}
-                                <td class="align-middle">
-                                    <div class="font-weight-bold" style="color: {{ $isTop ? '#1a6b3c' : '#2d3748' }}; font-size: {{ $isTop ? '0.95rem' : '0.875rem' }};">
-                                        Rp {{ number_format($penawaran->nilai_penawaran, 0, ',', '.') }}
-                                    </div>
-                                    @if($isTop)
-                                    <small style="color:#1a6b3c; font-size:0.72rem;">
-                                        <i class="fas fa-arrow-up mr-1"></i>Tertinggi
-                                    </small>
+                                    {{-- NILAI --}}
+                                    <td class="align-middle" data-sort="{{ $penawaran->created_at->timestamp }}">
+                                        <div class="font-weight-bold" style="color:{{ $isTop ? '#1a6b3c' : '#2d3748' }};font-size:{{ $isTop ? '0.95rem' : '0.875rem' }};">
+                                            Rp {{ number_format($penawaran->nilai_penawaran, 0, ',', '.') }}
+                                        </div>
+                                        @if($isTop)
+                                        <small style="color:#1a6b3c;font-size:0.72rem;">
+                                            <i class="fas fa-arrow-up mr-1"></i>Tertinggi
+                                        </small>
+                                        @endif
+                                    </td>
+
+                                    {{-- WAKTU --}}
+                                    <td class="align-middle text-muted" style="font-size:0.8rem;" data-sort="{{ $penawaran->created_at }}">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ \Carbon\Carbon::parse($penawaran->created_at)->format('d M Y') }}<br>
+                                        <span style="font-size:0.75rem;">{{ \Carbon\Carbon::parse($penawaran->created_at)->format('H:i') }} WIB</span>
+                                    </td>
+
+                                    {{-- STATUS --}}
+                                    <td class="align-middle">
+                                        @if($isTop && $lelang->status == 'closed')
+                                            <span class="badge badge-success" style="border-radius:6px;font-size:0.72rem;padding:4px 8px;">
+                                                <i class="fas fa-check mr-1"></i>Pemenang
+                                            </span>
+                                        @elseif($isTop)
+                                            <span class="badge badge-warning text-dark" style="border-radius:6px;font-size:0.72rem;padding:4px 8px;">
+                                                <i class="fas fa-star mr-1"></i>Tertinggi
+                                            </span>
+                                        @else
+                                            <span class="badge badge-light border" style="border-radius:6px;font-size:0.72rem;padding:4px 8px;color:#6c757d;">
+                                                Kalah
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    {{-- AKSI — hanya admin pusat, hanya penawaran tertinggi, hanya saat active --}}
+                                    @if(auth()->user()->role === 'admin_pusat' && $lelang->status === 'active')
+                                    <td class="align-middle text-center">
+                                        @if($isTop)
+                                        @php
+                                            $nilaiFormatted = number_format($penawaran->nilai_penawaran, 0, ',', '.');
+                                            $namaPenawar    = addslashes($penawaran->pembeli->nama ?? '-');
+                                        @endphp
+
+                                        <form id="form-hapus-bid-{{ $penawaran->id }}"
+                                            action="{{ route('admin.lelang.hapusPenawaranTertinggi', $lelang->id) }}"
+                                            method="POST" style="display:inline;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="btn btn-sm"
+                                                style="background:#fff3cd;color:#856404;border-radius:6px;padding:4px 10px;font-size:0.75rem;"
+                                                title="Hapus penawaran tidak wajar"
+                                                onclick="swalSubmitForm('form-hapus-bid-{{ $penawaran->id }}', {
+                                                    title: 'Hapus Penawaran Tertinggi?',
+                                                    text: 'Penawaran Rp {{ $nilaiFormatted }} oleh {{ $namaPenawar }} akan dihapus. Penawaran berikutnya otomatis menjadi tertinggi.',
+                                                    icon: 'warning',
+                                                    confirmText: 'Ya, Hapus',
+                                                    confirmColor: '#856404'
+                                                })">
+                                                <i class="fas fa-user-minus mr-1"></i>Hapus
+                                            </button>
+                                        </form>
+                                        @else
+                                        <span class="text-muted" style="font-size:0.75rem;">—</span>
+                                        @endif
+                                    </td>
                                     @endif
-                                </td>
 
-                                {{-- WAKTU --}}
-                                <td class="align-middle text-muted" style="font-size:0.8rem;">
-                                    <i class="fas fa-clock mr-1"></i>
-                                    {{ \Carbon\Carbon::parse($penawaran->created_at)->format('d M Y') }}<br>
-                                    <span style="font-size:0.75rem;">{{ \Carbon\Carbon::parse($penawaran->created_at)->format('H:i') }} WIB</span>
-                                </td>
-
-                                {{-- STATUS --}}
-                                <td class="align-middle">
-                                    @if($isTop && $lelang->status == 'closed')
-                                        <span class="badge badge-success" style="border-radius:6px; font-size:0.72rem; padding:4px 8px;">
-                                            <i class="fas fa-check mr-1"></i>Pemenang
-                                        </span>
-                                    @elseif($isTop)
-                                        <span class="badge badge-warning text-dark" style="border-radius:6px; font-size:0.72rem; padding:4px 8px;">
-                                            <i class="fas fa-star mr-1"></i>Tertinggi
-                                        </span>
-                                    @else
-                                        <span class="badge badge-light border" style="border-radius:6px; font-size:0.72rem; padding:4px 8px; color:#6c757d;">
-                                            Kalah
-                                        </span>
-                                    @endif
-                                </td>
-
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @else
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3 d-block" style="color:#d1e7d8;"></i>
+                        <div class="font-weight-bold mb-1">Belum ada penawaran</div>
+                        <small>Penawaran akan muncul di sini setelah lelang aktif</small>
+                    </div>
+                    @endif
                 </div>
-
-                @else
-                <div class="text-center py-5 text-muted">
-                    <i class="fas fa-inbox fa-3x mb-3 d-block" style="color: #d1e7d8;"></i>
-                    <div class="font-weight-bold mb-1">Belum ada penawaran</div>
-                    <small>Penawaran akan muncul di sini setelah lelang aktif</small>
-                </div>
-                @endif
 
             </div>
         </div>
@@ -441,7 +475,8 @@
 
     </div>
 </div>
-
+@endsection
+@push('scripts')
 <script>
     // ─── SLIDESHOW FOTO ───────────────────────────────────────────────────────
     let currentSlide = 0;
@@ -491,6 +526,15 @@
     updateCountdown();
     setInterval(updateCountdown, 1000);
     @endif
+
+document.addEventListener('DOMContentLoaded', function () {
+    LapauTable.init('tabelPenawaran', {
+        pageSize:  10,
+        sortCol: 2, 
+        searchable: false,
+        sortDir:   'desc',
+    });
+});
 </script>
 
-@endsection
+@endpush

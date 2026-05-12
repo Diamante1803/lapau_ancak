@@ -74,7 +74,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table id="tabelPengajuan" class="table table-hover mb-0">
 
                     <thead style="background: #f8fff9;">
                         <tr>
@@ -177,8 +177,13 @@
                             <td class="align-middle text-center">
                                 <div class="d-flex justify-content-center" style="gap: 6px;">
 
-                                    {{-- DETAIL — semua role --}}
-                                    <a href="{{ route($routePrefix . '.pengajuan.show', $p->id) }}"
+                                @php
+                                    $detailRoute = $isSatker
+                                        ? route('satker.pengajuan.step1', $p->id)
+                                        : route('admin.pengajuan.show', $p->id);
+                                @endphp    
+                                {{-- DETAIL — semua role --}}
+                                    <a href="{{ $detailRoute }}"
                                         class="btn btn-sm"
                                         style="background: #e8f5ee; color: #1a6b3c; border-radius: 6px; width: 34px;"
                                         title="Lihat Detail">
@@ -199,30 +204,44 @@
                                     </form>
                                     @endif
 
-                                    {{-- SUBMIT — hanya admin_satker, status draft --}}
+                                    {{-- SUBMIT --}}
                                     @if($isSatker && $p->status == 'draft')
-                                    <form action="{{ route($routePrefix . '.pengajuan.submit', $p->id) }}"
+                                    <form id="form-submit-{{ $p->id }}"
+                                        action="{{ route($routePrefix . '.pengajuan.submit', $p->id) }}"
                                         method="POST" style="display:inline;">
                                         @csrf
-                                        <button class="btn btn-sm"
-                                            style="background: #cce5ff; color: #004085; border-radius: 6px; width: 34px;"
-                                            onclick="return confirm('Kirim pengajuan ini ke Admin Pusat?')"
-                                            title="Submit ke Pusat">
+                                        <button type="button" class="btn btn-sm"
+                                            style="background:#cce5ff;color:#004085;border-radius:6px;width:34px;"
+                                            title="Submit ke Pusat"
+                                            onclick="swalSubmitForm('form-submit-{{ $p->id }}', {
+                                                title: 'Kirim Pengajuan?',
+                                                text: 'Pengajuan akan dikirim ke Admin Pusat untuk direview.',
+                                                icon: 'question',
+                                                confirmText: 'Ya, Kirim',
+                                                confirmColor: '#1a6b3c'
+                                            })">
                                             <i class="fas fa-paper-plane"></i>
                                         </button>
                                     </form>
                                     @endif
 
-                                    {{-- DELETE — hanya admin_satker, status draft --}}
+                                    {{-- DELETE --}}
                                     @if($isSatker && $p->status == 'draft')
-                                    <form action="{{ route($routePrefix . '.pengajuan.destroy', $p->id) }}"
+                                    <form id="form-delete-{{ $p->id }}"
+                                        action="{{ route($routePrefix . '.pengajuan.destroy', $p->id) }}"
                                         method="POST" style="display:inline;">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm"
-                                            style="background: #fde8e8; color: #e74a3b; border-radius: 6px; width: 34px;"
-                                            onclick="return confirm('Hapus pengajuan ini?')"
-                                            title="Hapus">
+                                        <button type="button" class="btn btn-sm"
+                                            style="background:#fde8e8;color:#e74a3b;border-radius:6px;width:34px;"
+                                            title="Hapus"
+                                            onclick="swalSubmitForm('form-delete-{{ $p->id }}', {
+                                                title: 'Hapus Pengajuan?',
+                                                text: 'Tindakan ini tidak dapat dibatalkan.',
+                                                icon: 'warning',
+                                                confirmText: 'Ya, Hapus',
+                                                confirmColor: '#e74a3b'
+                                            })">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
@@ -297,3 +316,17 @@
 @endif
 
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    LapauTable.init('tabelPengajuan', {
+        searchable: false,
+        pageSize: 10,
+        sortDir: 'desc'
+    });
+
+});
+</script>
+@endpush

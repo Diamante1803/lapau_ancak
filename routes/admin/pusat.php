@@ -50,6 +50,10 @@ Route::middleware(['auth', 'role:admin_pusat'])
         Route::resource('satker', SatkerController::class);
 
         Route::get('laporan', [LaporanController::class, 'pusat'])
-        ->name('laporan.index');
+        ->name('laporan.index');    
+        
+        Route::delete('/lelang/{lelang}/hapus-penawaran-tertinggi', 
+            [LelangController::class, 'hapusPenawaranTertinggi'])
+            ->name('lelang.hapusPenawaranTertinggi');
 
     });

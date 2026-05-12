@@ -62,7 +62,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table id="tabelLelangSelesai" class="table table-hover mb-0">
                     <thead style="background: #f8fff9;">
                         <tr>
                             <th class="border-0 pl-4" style="color: #1a6b3c; font-size: 0.82rem;">No</th>
@@ -348,3 +348,17 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    LapauTable.init('tabelLelangSelesai', {
+        searchable: false,
+        pageSize: 10,
+        sortDir: 'desc'
+    });
+
+});
+</script>
+@endpush

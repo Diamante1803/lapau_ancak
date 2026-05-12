@@ -17,10 +17,10 @@
             </small>
         </div>
 
-        <a href="#" class="btn btn-sm shadow-sm mt-2 mt-sm-0"
-            style="background: #1a6b3c; color: white; border-radius: 8px;">
+        <!-- <a href="#" class="btn btn-sm shadow-sm mt-2 mt-sm-0"
+            style="background:#1a6b3c;color:white;border-radius:8px;">
             <i class="fas fa-download fa-sm mr-1"></i> Generate Report
-        </a>
+        </a> -->
     </div>
 
     {{-- ================= STAT CARDS ================= --}}
@@ -136,19 +136,12 @@
                                 style="color: #e74a3b;">
                                 Total Nilai Penjualan
                                 <span class="d-block font-weight-normal text-muted" style="text-transform:none; font-size:0.7rem;">
-                                    Harga final pemenang terpilih
+                                    Sudah upload bukti pembayaran
                                 </span>
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                @if($stats['total_nilai'] >= 1000000)
-                                    Rp {{ number_format($stats['total_nilai'] / 1000000, 1, ',', '.') }} Jt
-                                @else
-                                    Rp {{ number_format($stats['total_nilai'], 0, ',', '.') }}
-                                @endif
-                            </div>
-                            <small class="text-muted" style="font-size:0.7rem;">
                                 Rp {{ number_format($stats['total_nilai'], 0, ',', '.') }}
-                            </small>
+                            </div>
                         </div>
                         <div class="col-auto">
                             <div style="width:48px;height:48px;border-radius:50%;background:rgba(231,74,59,0.1);display:flex;align-items:center;justify-content:center;">
@@ -186,7 +179,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0" width="100%" cellspacing="0">
+                <table id="tabelDashboard" class="table table-hover mb-0" width="100%" cellspacing="0">
 
                     <thead style="background: #f8fff9;">
                         <tr>
@@ -322,7 +315,7 @@
                             <td class="align-middle">
                                 <a href="{{ auth()->user()->role === 'admin_pusat' 
                                     ? route('admin.pengajuan.show', $item->id) 
-                                    : route('satker.pengajuan.show', $item->id) }}"
+                                    : route('satker.pengajuan.step4', $item->id) }}"
                                     class="btn btn-sm"
                                     style="background: #1a6b3c; color: white; border-radius: 6px;">
                                     <i class="fas fa-eye mr-1"></i>Detail
@@ -350,3 +343,15 @@
 </div>
 
 @endsection
+@push('scripts')
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    LapauTable.init('tabelDashboard', {
+        searchable: false,
+        pageSize:  10,
+        sortDir:   'desc',
+    });
+});
+</script>
+@endpush

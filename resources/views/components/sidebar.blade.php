@@ -4,7 +4,7 @@
         style="background: linear-gradient(180deg, #1a6b3c 0%, #145c32 50%, #0f4526 100%);">
 
         <!-- Brand -->
-        <a class="sidebar-brand d-flex align-items-center justify-content-center py-4" href="#">
+        <a class="sidebar-brand d-flex align-items-center justify-content-center py-4" href="{{ route('admin.dashboard') }}">
             <div class="sidebar-brand-icon mr-2">
                 <i class="fas fa-gavel" style="font-size: 1.5rem; color: #f6c90e;"></i>
             </div>
@@ -224,7 +224,8 @@
                 <div class="py-2 collapse-inner rounded" style="background: rgba(0,0,0,0.15);">
 
                     <a class="collapse-item" style="color: rgba(255,255,255,0.8);" 
-                    href="{{ auth()->user()->role === 'admin_pusat' ? route('admin.laporan.index') : route('satker.laporan.index') }}">
+                    href="{{ auth()->user()->role === 'admin_pusat' ? route('admin.laporan.index') 
+                    : route('satker.laporan.index') }}">
                         <i class="fas fa-file-pdf fa-sm mr-2"></i>Laporan Lelang
                     </a>
 

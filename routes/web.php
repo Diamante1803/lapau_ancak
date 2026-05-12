@@ -18,8 +18,8 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    return redirect()->route('admin.dashboard');
+})->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -45,5 +45,7 @@ Route::get('/verify', [PenawaranController::class, 'verifyMagicLink'])
 
 Route::post('/lelang/{lelang}/bid', [PenawaranController::class, 'submitPenawaran'])
     ->name('public.bid');
+
+Route::get('/lelang/{lelang}/polling', [PenawaranController::class, 'pollingPenawaran']);
 
 require __DIR__.'/auth.php';

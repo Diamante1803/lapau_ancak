@@ -144,9 +144,23 @@
             {{-- Countdown --}}
             <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 text-center">
                 <div class="text-xs text-blue-500 mb-2 font-medium">⏱ Waktu Lelang Tersisa</div>
-                <div class="font-mono font-bold text-blue-800 text-3xl countdown"
-                     data-end="{{ $lelang->tanggal_selesai->toIso8601String() }}">
-                    --:--:--
+                <div class="font-mono font-bold text-blue-800 countdown flex items-end justify-center gap-2"
+                    data-end="{{ $lelang->tanggal_selesai->toIso8601String() }}">
+                        @foreach([['id'=>'cd-hari','label'=>'Hari'],['id'=>'cd-jam','label'=>'Jam'],['id'=>'cd-menit','label'=>'Menit'],['id'=>'cd-detik','label'=>'Detik']] as $unit)
+                        <div class="text-center">
+                            <div id="{{ $unit['id'] }}-{{ $lelang->id }}"
+                                class="font-bold"
+                                style="font-size: 1.6rem; color: #1d4ed8; line-height: 1; min-width: 36px; letter-spacing: 1px;">
+                                00
+                            </div>
+                            <div style="font-size: 0.65rem; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">
+                                {{ $unit['label'] }}
+                            </div>
+                        </div>
+                        @if(!$loop->last)
+                        <div class="font-bold pb-4" style="color: #1d4ed8; font-size: 1.2rem;">:</div>
+                        @endif
+                        @endforeach
                 </div>
                 <div class="text-xs text-gray-400 mt-2">
                     Berakhir: {{ $lelang->tanggal_selesai->format('d M Y, H:i') }} WIB
@@ -179,8 +193,10 @@
             </span>
         </div>
 
-        @if($lelang->penawarans->count() > 0)
-        <div class="divide-y divide-gray-50">
+        <div id="list-penawaran">
+
+            @if($lelang->penawarans->count() > 0)
+            <div class="divide-y divide-gray-50">
             @foreach($lelang->penawarans->sortByDesc('nilai_penawaran') as $penawaran)
                 <div class="px-6 py-4 flex items-center justify-between
                     {{ $loop->first ? 'bg-green-50' : '' }}">
@@ -219,14 +235,15 @@
 
                 </div>
             @endforeach
-        </div>
+            </div>
 
-        @else
-        <div class="text-center py-12 text-gray-400">
-            <i class="fas fa-inbox text-4xl mb-3 block opacity-30"></i>
-            <p>Belum ada penawaran. Jadilah yang pertama!</p>
+            @else
+            <div class="text-center py-12 text-gray-400">
+                <i class="fas fa-inbox text-4xl mb-3 block opacity-30"></i>
+                <p>Belum ada penawaran. Jadilah yang pertama!</p>
+            </div>
+            @endif
         </div>
-        @endif
 
     </div>
 
@@ -316,12 +333,30 @@
 
                 <div>
                     <label class="text-xs font-bold text-gray-600 block mb-1">Nilai Penawaran (Rp)</label>
-                    <input type="number" id="inputPenawaran"
-                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="Masukkan nominal"
-                        min="{{ $minPenawaran }}">
-                    <p class="text-xs text-gray-400 mt-1">
-                        Minimal Rp {{ number_format($minPenawaran, 0, ',', '.') }}
+
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">Rp</span>
+                        <input type="text" id="displayPenawaran"
+                            class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            placeholder="0"
+                            autocomplete="off"
+                            oninput="
+                                let raw = this.value.replace(/\D/g, '');
+                                this.value = raw ? parseInt(raw).toLocaleString('id-ID') : '';
+                                document.getElementById('inputPenawaran').value = raw || '';
+                                validateKelipatan(document.getElementById('inputPenawaran'));
+                            ">
+                        <input type="number" id="inputPenawaran"
+                            class="hidden"
+                            min="{{ $minPenawaran }}"
+                            step="1000">
+                    </div>
+
+                    <p class="text-xs text-gray-400 mt-1" id="textMinimalPenawaran">
+                        Minimal Rp {{ number_format($minPenawaran, 0, ',', '.') }} • Kelipatan Rp 1.000
+                    </p>
+                    <p id="msg-kelipatan" class="text-xs text-red-500 mt-1" style="display:none;">
+                        <i class="fas fa-exclamation-circle mr-1"></i>Nominal harus kelipatan Rp 1.000
                     </p>
                 </div>
 
@@ -349,6 +384,10 @@
 // 1. Variables global
 const minPenawaran = {{ $minPenawaran }};
 const lelangId     = {{ $lelang->id }};
+
+let pollingInterval = null;
+let detailIdx = 0;
+let lastUpdate = null;
 
 @if(session('verified_pembeli_id'))
 window._verifiedNama    = '{{ session('verified_pembeli_nama') }}';
@@ -441,57 +480,96 @@ async function kirimMagicLink() {
 
 // 4. Submit penawaran
 async function submitPenawaran() {
-    const nilai = parseInt(document.getElementById('inputPenawaran').value);
-    const err   = document.getElementById('errorStep2');
-    const btn   = document.getElementById('btnSubmitPenawaran');
 
-    if (!nilai || nilai < minPenawaran) {
+    const input = document.getElementById('inputPenawaran');
+
+    const nilai = parseInt(input.value);
+
+    const err = document.getElementById('errorStep2');
+    const btn = document.getElementById('btnSubmitPenawaran');
+
+    // validasi kosong
+    if (!nilai) {
+        err.textContent = 'Nominal penawaran wajib diisi.';
+        err.classList.remove('hidden');
+        return;
+    }
+
+    // validasi minimal
+    if (nilai < minPenawaran) {
         err.textContent = 'Penawaran minimal Rp ' + minPenawaran.toLocaleString('id-ID');
         err.classList.remove('hidden');
         return;
     }
 
+    // validasi kelipatan
+    if (nilai % 1000 !== 0) {
+        document.getElementById('msg-kelipatan').style.display = 'block';
+        input.focus();
+        return;
+    }
+
     err.classList.add('hidden');
-    btn.disabled    = true;
-    btn.textContent = 'Mengirim...';
+
+    btn.disabled = true;
+    btn.innerHTML = 'Mengirim...';
 
     try {
+
         const res = await fetch('/lelang/{{ $lelang->id }}/bid', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
             },
-            body: JSON.stringify({ nilai_penawaran: nilai })
+            body: JSON.stringify({
+                nilai_penawaran: nilai
+            })
         });
 
         const data = await res.json();
 
         if (data.success) {
+
             tutupModal();
 
-            document.getElementById('hargaTertinggiDetail').textContent = data.harga_formatted;
-            document.getElementById('minPenawaranDetail').textContent   =
+            document.getElementById('hargaTertinggiDetail').textContent =
+                data.harga_formatted;
+
+            document.getElementById('minPenawaranDetail').textContent =
                 'Rp ' + data.min_berikutnya.toLocaleString('id-ID');
 
             tampilToast('🎉 ' + data.message);
-            setTimeout(() => location.reload(), 2000);
+
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
 
         } else if (data.reVerify) {
+
             tutupModal();
+
             tampilToast('⚠️ Sesi habis, silakan verifikasi ulang.');
+
         } else {
+
             err.textContent = data.message;
             err.classList.remove('hidden');
+
         }
 
     } catch (e) {
+
+        console.error(e);
+
         err.textContent = 'Terjadi kesalahan. Coba lagi.';
         err.classList.remove('hidden');
+
     }
 
-    btn.disabled  = false;
-    btn.innerHTML = '<i class="fas fa-gavel mr-2"></i>Kirim Penawaran';
+    btn.disabled = false;
+    btn.innerHTML =
+        '<i class="fas fa-gavel mr-2"></i>Kirim Penawaran';
 }
 
 // 5. Toast
@@ -509,6 +587,11 @@ function updateCountdowns() {
         const end  = new Date(el.dataset.end).getTime();
         const now  = new Date().getTime();
         const diff = end - now;
+
+        const hariEl   = el.querySelector('[id^="cd-hari-"]');
+        const jamEl    = el.querySelector('[id^="cd-jam-"]');
+        const menitEl  = el.querySelector('[id^="cd-menit-"]');
+        const detikEl  = el.querySelector('[id^="cd-detik-"]');
 
         const tombol = document.getElementById('tombol-penawaran');
 
@@ -540,6 +623,8 @@ function updateCountdowns() {
                 tombol.innerHTML = '<i class="fas fa-clock"></i> Lelang Telah Berakhir';
             }
 
+            stopPolling();
+
             // Sembunyikan info minimal penawaran
             const infoMin = document.getElementById('info-min-penawaran');
             if (infoMin) infoMin.style.display = 'none';
@@ -559,14 +644,15 @@ function updateCountdowns() {
         }
 
         // Countdown normal
-        const h = Math.floor(diff / 3600000);
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
 
-        el.textContent =
-            String(h).padStart(2, '0') + ':' +
-            String(m).padStart(2, '0') + ':' +
-            String(s).padStart(2, '0');
+        hariEl.textContent  = String(d).padStart(2, '0');
+        jamEl.textContent   = String(h).padStart(2, '0');
+        menitEl.textContent = String(m).padStart(2, '0');
+        detikEl.textContent = String(s).padStart(2, '0');
 
         // Warna merah jika sisa < 1 jam
         if (diff < 3600000) {
@@ -579,8 +665,6 @@ setInterval(updateCountdowns, 1000);
 updateCountdowns();
 
 // 7. Slideshow
-let detailIdx = 0;
-
 function detailSlide(arah, total) {
     detailIdx = (detailIdx + arah + total) % total;
     detailUpdateSlide(total);
@@ -627,6 +711,10 @@ document.getElementById('modalZoom').addEventListener('click', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
+    @if($lelang->status === 'active')
+    startPolling();
+    @endif
+
     @if($lelang->status === 'closed')
 
     const tombol = document.getElementById('tombol-penawaran');
@@ -649,9 +737,90 @@ document.addEventListener('DOMContentLoaded', function () {
             </span>
         `;
     }
-
     @endif
 });
+
+document.addEventListener('visibilitychange', () => {
+
+    if (document.hidden) {
+        stopPolling();
+    } else {
+        startPolling();
+    }
+
+});
+
+function validateKelipatan(input) {
+    const val = parseInt(input.value);
+    const msg = document.getElementById('msg-kelipatan');
+
+    if (!val) {
+        msg.style.display = 'none';
+        return;
+    }
+
+    if (val % 1000 !== 0) {
+        msg.style.display = 'block';
+        input.classList.add('border-red-400', 'focus:ring-red-400');
+        input.classList.remove('border-gray-200', 'focus:ring-blue-400');
+    } else {
+        msg.style.display = 'none';
+        input.classList.remove('border-red-400', 'focus:ring-red-400');
+        input.classList.add('border-gray-200', 'focus:ring-blue-400');
+    }
+}
+function startPolling() {
+    if (pollingInterval) return; // cegah double interval
+
+    pollingInterval = setInterval(fetchPenawaran, 5000);
+}
+
+function stopPolling() {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+}
+async function fetchPenawaran() {
+    try {
+        const res = await fetch(`/lelang/${lelangId}/polling`);
+        const data = await res.json();
+
+        const textMin = document.getElementById('textMinimalPenawaran');
+
+        if (textMin) {
+
+            textMin.textContent =
+                'Minimal Rp ' +
+                Number(data.min_penawaran).toLocaleString('id-ID') +
+                ' • Kelipatan Rp 1.000';
+
+        }
+
+        if (!data.success) return;
+
+        // Check if the data has been updated
+        if (data.updated_at !== lastUpdate) {
+            lastUpdate = data.updated_at;
+        } else {
+            return;
+        }
+
+        const list = document.getElementById('list-penawaran');
+        if (list) list.innerHTML = data.html;
+
+        const harga = document.getElementById('hargaTertinggiDetail');
+        if (harga) {
+            harga.textContent = 'Rp ' + Number(data.harga_tertinggi).toLocaleString('id-ID');
+        }
+
+        const min = document.getElementById('minPenawaranDetail');
+        if (min) {
+            min.textContent = 'Rp ' + Number(data.min_penawaran).toLocaleString('id-ID');
+        }
+
+    } catch (e) {
+        console.log('Polling error:', e);
+    }
+}
 </script>
 
 @endsection

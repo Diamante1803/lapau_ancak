@@ -12,6 +12,7 @@ use App\Models\Satker;
 use App\Models\User;
 use App\Models\PengajuanLelang;
 use App\Models\Lelang;
+use App\Models\LaporanLelang;
 
 class AdminPusatController extends Controller
 {
@@ -51,17 +52,18 @@ class AdminPusatController extends Controller
                 ->count(),
 
             // Total nilai penjualan final (harga_tertinggi saat closed)
-            'total_nilai' => (clone $baseLelang)
-                ->where('status', 'closed')
-                ->whereNotNull('pemenang_id')
-                ->sum('harga_tertinggi'),
+            'total_nilai' => LaporanLelang::whereNotNull('file_bukti_bayar')
+                ->join('lelangs', 'laporan_lelangs.lelang_id', '=', 'lelangs.id')
+                ->sum('lelangs.harga_tertinggi'),
         ];
 
         $pengajuans = (clone $basePengajuan)
             ->with([
                 'satker',
-                'perkaras.barangs.lelang', // tambah ini
-            ])
+                'perkaras.barangs.lelang', ])
+            ->when($isPusat, function($q) {        
+            $q->whereNotIn('status', ['draft']);
+            })
             ->latest()
             ->take(5)
             ->get();

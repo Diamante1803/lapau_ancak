@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use App\Models\Pembeli;
 use App\Models\Lelang;
 use App\Models\Penawaran;
@@ -166,38 +167,96 @@ class PenawaranController extends Controller
         }
 
         $request->validate([
-            'nilai_penawaran' => 'required|numeric|min:0',
+            'nilai_penawaran' => 'required|numeric|min:' . ($lelang->harga_awal ?? 1),
         ]);
 
         $nilaiPenawaran = (float) $request->nilai_penawaran;
-        $minPenawaran   = ($lelang->harga_tertinggi ?? $lelang->harga_awal) + 10000;
+        try {
 
-        // Validasi minimal penawaran
-        if ($nilaiPenawaran < $minPenawaran) {
+            $result = DB::transaction(function () use (
+                $nilaiPenawaran,
+                $lelang,
+                $pembeliId
+            ) {
+
+                // 🔒 Lock row lelang agar tidak bentrok
+                $lelang = Lelang::lockForUpdate()->find($lelang->id);
+
+                // Ambil harga terkini dari database
+                $hargaSekarang = $lelang->harga_tertinggi
+                    ?? $lelang->harga_awal;
+
+                // Minimal kenaikan
+                $minPenawaran = $hargaSekarang + 10000;
+
+                // Validasi nominal
+                if ($nilaiPenawaran < $minPenawaran) {
+                    throw new \Exception(
+                        'Penawaran minimal Rp ' .
+                        number_format($minPenawaran, 0, ',', '.')
+                    );
+                }
+
+                // Simpan penawaran
+                Penawaran::create([
+                    'lelang_id'       => $lelang->id,
+                    'pembeli_id'      => $pembeliId,
+                    'nilai_penawaran' => $nilaiPenawaran,
+                ]);
+
+                // Update harga tertinggi
+                $lelang->update([
+                    'harga_tertinggi'       => $nilaiPenawaran,
+                    'pemenang_sementara_id' => $pembeliId,
+                ]);
+
+                return [
+                    'harga_tertinggi' => $nilaiPenawaran,
+                    'min_berikutnya'  => $nilaiPenawaran + 10000,
+                ];
+            });
+
+            return response()->json([
+                'success'         => true,
+                'message'         => 'Penawaran berhasil dikirim!',
+                'harga_tertinggi' => $result['harga_tertinggi'],
+                'harga_formatted' => 'Rp ' .
+                    number_format($result['harga_tertinggi'], 0, ',', '.'),
+                'min_berikutnya'  => $result['min_berikutnya'],
+            ]);
+
+        } catch (\Exception $e) {
+
             return response()->json([
                 'success' => false,
-                'message' => 'Penawaran minimal Rp ' . number_format($minPenawaran, 0, ',', '.')
+                'message' => $e->getMessage(),
             ], 422);
         }
+    }
 
-        // Simpan penawaran
-        $penawaran = Penawaran::create([
-            'lelang_id'       => $lelang->id,
-            'pembeli_id'      => $pembeliId,
-            'nilai_penawaran' => $nilaiPenawaran,
-        ]);
-
-        // Update harga tertinggi di tabel lelang
-        $lelang->update([
-            'harga_tertinggi' => $nilaiPenawaran,
-        ]);
+    public function pollingPenawaran(Lelang $lelang)
+    {
+        $penawarans = $lelang->penawarans()
+            ->with('pembeli')
+            ->orderByDesc('nilai_penawaran')
+            ->limit(20)
+            ->get();
 
         return response()->json([
-            'success'          => true,
-            'message'          => 'Penawaran berhasil dikirim!',
-            'harga_tertinggi'  => $nilaiPenawaran,
-            'harga_formatted'  => 'Rp ' . number_format($nilaiPenawaran, 0, ',', '.'),
-            'min_berikutnya'   => $nilaiPenawaran + 10000,
+            'success' => true,
+
+            'updated_at' => optional(
+                $penawarans->first()
+            )->updated_at?->timestamp,
+
+            'html' => view('partials.penawaran-list', [
+                'penawarans' => $penawarans
+            ])->render(),
+
+            'harga_tertinggi' => $lelang->harga_tertinggi,
+
+            'min_penawaran' =>
+                ($lelang->harga_tertinggi ?? $lelang->harga_awal) + 10000,
         ]);
     }
 }
