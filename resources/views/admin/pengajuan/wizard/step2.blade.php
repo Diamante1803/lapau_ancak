@@ -34,7 +34,7 @@
                 @php
                     $stepItems   = [
                         1 => ['label' => 'Info & Dokumen',  'icon' => 'fa-file-alt'],
-                        2 => ['label' => 'Perkara',         'icon' => 'fa-balance-scale'],
+                        2 => ['label' => 'Putusan',         'icon' => 'fa-balance-scale'],
                         3 => ['label' => 'Barang & Foto',   'icon' => 'fa-boxes'],
                         4 => ['label' => 'Review & Submit', 'icon' => 'fa-paper-plane'],
                     ];
@@ -103,12 +103,68 @@
         <script>setTimeout(() => { let a = document.getElementById('autoAlert'); if(a){a.style.opacity='0';setTimeout(()=>a.remove(),500);} }, 4000);</script>
         @endif
 
+        {{-- ================= RIWAYAT REVISI ================= --}}
+                @if($pengajuan->catatan_revisi && count($pengajuan->catatan_revisi) > 0)
+                <div class="card shadow-sm mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
+
+                    <div class="card-header" style="background: linear-gradient(90deg, #856404, #a07800); padding: 12px 20px;">
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="fas fa-history mr-2" style="color: #f6c90e;"></i>
+                            Riwayat Revisi
+                            <span class="badge ml-2"
+                                style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.7rem; padding: 3px 8px;">
+                                {{ count($pengajuan->catatan_revisi) }}x revisi
+                            </span>
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="d-flex overflow-auto" style="gap:0;">
+                            @foreach($pengajuan->catatan_revisi as $idx => $revisi)
+                            <div class="flex-shrink-0 px-4 py-3"
+                                style="min-width:220px; max-width:260px; border-right:1px solid #f0e6c8;
+                                    {{ $idx == count($pengajuan->catatan_revisi) - 1 ? 'background:#fffdf0;' : 'background:white;' }}">
+
+                                <div class="d-flex align-items-center mb-2" style="gap:8px;">
+                                    <div style="
+                                        width:28px; height:28px; border-radius:50%; flex-shrink:0;
+                                        background:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#f6c90e' : '#e9ecef' }};
+                                        color:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#856404' : '#6c757d' }};
+                                        display:flex; align-items:center; justify-content:center;
+                                        font-weight:bold; font-size:0.72rem;">
+                                        {{ $revisi['ke_revisi'] }}
+                                    </div>
+                                    <div class="font-weight-bold small" style="color:#856404;">
+                                        Revisi ke-{{ $revisi['ke_revisi'] }}
+                                        @if($idx == count($pengajuan->catatan_revisi) - 1)
+                                        <span class="badge badge-warning ml-1" style="font-size:0.62rem;border-radius:20px;">
+                                            Terbaru
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <p class="mb-1 small" style="color:#4a4a4a; font-size:0.82rem; line-height:1.4;">
+                                    {{ $revisi['catatan'] }}
+                                </p>
+                                <small class="text-muted" style="font-size:0.72rem;">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
+                                </small>
+
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
+
         {{-- ================= FORM TAMBAH PERKARA ================= --}}
         @if($canEdit)
         <div class="card shadow mb-4" style="border:none;border-radius:12px;overflow:hidden;">
             <div class="card-header" style="background:linear-gradient(90deg,#c0392b,#a93226);padding:14px 20px;">
                 <h6 class="m-0 font-weight-bold text-white">
-                    <i class="fas fa-plus-circle mr-2" style="color:#f6c90e;"></i>Tambah Perkara Baru
+                    <i class="fas fa-plus-circle mr-2" style="color:#f6c90e;"></i>Tambah Putusan Perkara Baru
                 </h6>
             </div>
             <div class="card-body" style="background:#fff8f8;">
@@ -118,9 +174,9 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold text-muted">Nomor Perkara</label>
+                                <label class="small font-weight-bold text-muted">Nomor Putusan Perkara</label>
                                 <input type="text" name="nomor_perkara"
-                                    class="form-control form-control-sm" placeholder="Nomor Perkara"
+                                    class="form-control form-control-sm" placeholder="Nomor Putusan Perkara"
                                     value="{{ old('nomor_perkara') }}" required style="border-radius:6px;">
                             </div>
                         </div>
@@ -142,7 +198,7 @@
                         </div>
                     </div>
 
-                    <label class="small font-weight-bold text-muted">Upload Dokumen Perkara</label>
+                    <label class="small font-weight-bold text-muted">Upload Dokumen Putusan Perkara</label>
                     @error('dokumen')<small class="text-danger d-block mb-1">{{ $message }}</small>@enderror
 
                     <div id="dokumen-wrapper">
@@ -171,7 +227,7 @@
 
                     <button class="btn btn-sm font-weight-bold"
                         style="background:#c0392b;color:white;border-radius:6px;">
-                        <i class="fas fa-save mr-1"></i> Tambah Perkara
+                        <i class="fas fa-save mr-1"></i> Tambah Putusan Perkara
                     </button>
                 </form>
             </div>
@@ -183,7 +239,7 @@
             <div class="card-header" style="background:linear-gradient(90deg,#1a6b3c,#145c32);padding:14px 20px;">
                 <h6 class="m-0 font-weight-bold text-white">
                     <i class="fas fa-balance-scale mr-2" style="color:#f6c90e;"></i>
-                    Data Perkara
+                    Data Putusan Perkara
                     <span class="badge ml-2"
                         style="background:rgba(255,255,255,0.2);color:white;border-radius:20px;font-size:0.7rem;">
                         {{ $pengajuan->perkaras->count() }} perkara
@@ -232,8 +288,8 @@
                                 <button type="button" class="btn btn-sm"
                                     style="background:#fde8e8;color:#e74a3b;border-radius:6px;width:30px;height:30px;padding:0;"
                                     onclick="event.stopPropagation(); swalSubmitForm('form-perkara-{{ $p->id }}', {
-                                        title: 'Hapus Perkara?',
-                                        text: 'Perkara beserta seluruh dokumen dan barangnya akan dihapus permanen.',
+                                        title: 'Hapus PutusanPerkara?',
+                                        text: 'Putusan Perkara beserta seluruh dokumen dan barangnya akan dihapus permanen.',
                                         icon: 'warning',
                                         confirmText: 'Ya, Hapus',
                                         confirmColor: '#e74a3b'
@@ -325,7 +381,7 @@
                 @empty
                 <div class="text-center py-5 text-muted">
                     <i class="fas fa-balance-scale fa-2x mb-2 d-block" style="color:#f5c6cb;opacity:0.5;"></i>
-                    Belum ada data perkara — tambahkan perkara di atas
+                    Belum ada data putusan perkara — tambahkan putusan di atas
                 </div>
                 @endforelse
 
@@ -349,7 +405,7 @@
             @else
             <button disabled class="btn btn-sm font-weight-bold"
                 style="background:#ccc;color:white;border-radius:8px;padding:8px 24px;cursor:not-allowed;"
-                title="Pastikan minimal ada 1 perkara dan setiap perkara memiliki dokumen">
+                title="Pastikan minimal ada 1 putusan perkara dan setiap putusan perkara memiliki dokumen">
                 Lanjut ke Barang <i class="fas fa-arrow-right ml-1"></i>
             </button>
             @endif
@@ -368,7 +424,7 @@
                 @csrf @method('PUT')
                 <div class="modal-header" style="background:linear-gradient(90deg,#1a6b3c,#145c32);">
                     <h5 class="modal-title text-white font-weight-bold">
-                        <i class="fas fa-edit mr-2" style="color:#f6c90e;"></i>Edit Perkara
+                        <i class="fas fa-edit mr-2" style="color:#f6c90e;"></i>Edit Putusan Perkara
                     </h5>
                     <button class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
@@ -376,7 +432,7 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="small font-weight-bold text-muted">Nomor Perkara</label>
+                                <label class="small font-weight-bold text-muted">Nomor Putusan Perkara</label>
                                 <input type="text" name="nomor_perkara" value="{{ $p->nomor_perkara }}"
                                     class="form-control" style="border-radius:8px;" required>
                             </div>
@@ -415,7 +471,8 @@
                         @endforelse
                     </ul>
                     <label class="small font-weight-bold text-muted">Tambah Dokumen Baru</label>
-                    <div id="dokumen-wrapper-edit-{{ $p->id }}">
+                    <div id="dokumen-wrapper-edit-{{ $p->id }}"
+                        data-existing="{{ $p->dokumenPerkara->count() }}">
                         <div class="input-group mb-2">
                             <input type="file" name="dokumen[]" class="form-control form-control-sm" accept=".pdf">
                             <input type="text" name="nama_dokumen[]" class="form-control form-control-sm" placeholder="Nama Dokumen">
@@ -433,7 +490,7 @@
                     <button class="btn btn-sm btn-secondary" data-dismiss="modal" style="border-radius:6px;">Batal</button>
                     <button class="btn btn-sm font-weight-bold"
                         style="background:#1a6b3c;color:white;border-radius:6px;">
-                        <i class="fas fa-save mr-1"></i> Update Perkara
+                        <i class="fas fa-save mr-1"></i> Update Putusan Perkara
                     </button>
                 </div>
             </form>
@@ -523,17 +580,28 @@ document.getElementById('dokumen-wrapper')?.addEventListener('change', function 
 function tambahDokumenEdit(id) {
     const wrapper = document.getElementById('dokumen-wrapper-edit-' + id);
     if (!wrapper) return;
-    if (wrapper.querySelectorAll('.input-group').length >= 5) return;
+
+    const existing = parseInt(wrapper.dataset.existing || 0);
+    const currentNew = wrapper.querySelectorAll('.input-group').length;
+
+    const total = existing + currentNew;
+
+    if (total >= 5) {
+        alert('Maksimal total 5 dokumen (termasuk yang sudah ada)');
+        return;
+    }
+
     wrapper.insertAdjacentHTML('beforeend', `
-    <div class="input-group mb-2">
-        <input type="file" name="dokumen[]" class="form-control form-control-sm" accept=".pdf">
-        <input type="text" name="nama_dokumen[]" class="form-control form-control-sm" placeholder="Nama Dokumen">
-        <div class="input-group-append">
-            <button type="button" class="btn btn-sm btn-danger" onclick="hapusDokumenEdit(this)">
-                <i class="fas fa-minus"></i>
-            </button>
+        <div class="input-group mb-2">
+            <input type="file" name="dokumen[]" class="form-control form-control-sm" accept=".pdf">
+            <input type="text" name="nama_dokumen[]" class="form-control form-control-sm" placeholder="Nama Dokumen">
+            <div class="input-group-append">
+                <button type="button" class="btn btn-sm btn-danger" onclick="hapusDokumenEdit(this, ${id})">
+                    <i class="fas fa-minus"></i>
+                </button>
+            </div>
         </div>
-    </div>`);
+    `);
 }
 
 function hapusDokumenEdit(btn) { btn.closest('.input-group').remove(); }

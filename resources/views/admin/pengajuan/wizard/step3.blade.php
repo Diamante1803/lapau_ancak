@@ -30,7 +30,7 @@
                 @php
                     $stepItems   = [
                         1 => ['label' => 'Info & Dokumen',  'icon' => 'fa-file-alt'],
-                        2 => ['label' => 'Perkara',         'icon' => 'fa-balance-scale'],
+                        2 => ['label' => 'Putusan',         'icon' => 'fa-balance-scale'],
                         3 => ['label' => 'Barang & Foto',   'icon' => 'fa-boxes'],
                         4 => ['label' => 'Review & Submit', 'icon' => 'fa-paper-plane'],
                     ];
@@ -98,6 +98,62 @@
         </div>
         <script>setTimeout(() => { let a = document.getElementById('autoAlert'); if(a){a.style.opacity='0';setTimeout(()=>a.remove(),500);} }, 4000);</script>
         @endif
+
+        {{-- ================= RIWAYAT REVISI ================= --}}
+                @if($pengajuan->catatan_revisi && count($pengajuan->catatan_revisi) > 0)
+                <div class="card shadow-sm mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
+
+                    <div class="card-header" style="background: linear-gradient(90deg, #856404, #a07800); padding: 12px 20px;">
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="fas fa-history mr-2" style="color: #f6c90e;"></i>
+                            Riwayat Revisi
+                            <span class="badge ml-2"
+                                style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.7rem; padding: 3px 8px;">
+                                {{ count($pengajuan->catatan_revisi) }}x revisi
+                            </span>
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="d-flex overflow-auto" style="gap:0;">
+                            @foreach($pengajuan->catatan_revisi as $idx => $revisi)
+                            <div class="flex-shrink-0 px-4 py-3"
+                                style="min-width:220px; max-width:260px; border-right:1px solid #f0e6c8;
+                                    {{ $idx == count($pengajuan->catatan_revisi) - 1 ? 'background:#fffdf0;' : 'background:white;' }}">
+
+                                <div class="d-flex align-items-center mb-2" style="gap:8px;">
+                                    <div style="
+                                        width:28px; height:28px; border-radius:50%; flex-shrink:0;
+                                        background:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#f6c90e' : '#e9ecef' }};
+                                        color:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#856404' : '#6c757d' }};
+                                        display:flex; align-items:center; justify-content:center;
+                                        font-weight:bold; font-size:0.72rem;">
+                                        {{ $revisi['ke_revisi'] }}
+                                    </div>
+                                    <div class="font-weight-bold small" style="color:#856404;">
+                                        Revisi ke-{{ $revisi['ke_revisi'] }}
+                                        @if($idx == count($pengajuan->catatan_revisi) - 1)
+                                        <span class="badge badge-warning ml-1" style="font-size:0.62rem;border-radius:20px;">
+                                            Terbaru
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <p class="mb-1 small" style="color:#4a4a4a; font-size:0.82rem; line-height:1.4;">
+                                    {{ $revisi['catatan'] }}
+                                </p>
+                                <small class="text-muted" style="font-size:0.72rem;">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
+                                </small>
+
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
 
         {{-- ================= LOOP PERKARA — BARANG ================= --}}
         @foreach($pengajuan->perkaras as $perkara)
@@ -177,12 +233,16 @@
                                                 Harga Limit (Rp)
                                                 <span class="text-muted font-weight-normal">— maks. Rp 35.000.000</span>
                                             </label>
-                                            <input type="number" name="harga_awal"
+                                            <input type="text"
                                                 class="form-control form-control-sm @if($errors->any() && old('perkara_id') == $perkara->id) @error('harga_awal') is-invalid @enderror @endif"
-                                                placeholder="0" min="1" max="35000000"
-                                                value="{{ old('perkara_id') == $perkara->id ? old('harga_awal') : '' }}"
+                                                placeholder="Rp 0"
+                                                value="{{ old('perkara_id') == $perkara->id ? number_format(old('harga_awal'), 0, ',', '.') : '' }}"
                                                 style="border-radius:6px;"
-                                                oninput="validateHargaLimit(this)">
+                                                oninput="formatRupiah(this, 'harga_awal_{{ $perkara->id }}')">
+                                            
+                                            <input type="hidden" name="harga_awal"
+                                                id="harga_awal_{{ $perkara->id }}"
+                                                value="{{ old('perkara_id') == $perkara->id ? old('harga_awal') : '' }}">
                                             <small id="harga-limit-msg-{{ $perkara->id }}"
                                                 style="color:#c0392b;display:none;">
                                                 <i class="fas fa-exclamation-circle mr-1"></i>Harga limit tidak boleh melebihi Rp 35.000.000
@@ -545,6 +605,22 @@ document.addEventListener('DOMContentLoaded', function () {
     if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
     @endif
 });
+function formatRupiah(el, targetId) {
+    let angka = el.value.replace(/[^0-9]/g, '');
+
+    // batasi max (opsional, sesuai max kamu)
+    if (parseInt(angka) > 35000000) {
+        angka = '35000000';
+    }
+
+    // format tampilan (1.000.000)
+    let formatted = new Intl.NumberFormat('id-ID').format(angka);
+
+    el.value = angka ? 'Rp ' + formatted : '';
+
+    // set ke input hidden (tanpa titik)
+    document.getElementById(targetId).value = angka;
+}
 </script>
 
 @endsection

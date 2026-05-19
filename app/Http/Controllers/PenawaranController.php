@@ -14,6 +14,33 @@ use Carbon\Carbon;
 
 class PenawaranController extends Controller
 {
+    public function cekToken(Request $request)
+    {
+        $email = $request->query('email');
+        if (!$email) return response()->json(['verified' => false]);
+
+        $pembeli = Pembeli::where('email', $email)
+            ->where('magic_token', '!=', null)
+            ->whereNotNull('token_expired_at')
+            ->where('token_expired_at', '>', now())
+            ->first();
+
+        if (!$pembeli) return response()->json(['verified' => false]);
+
+        // Token masih valid — set session sekalian
+        session([
+            'verified_pembeli_id'   => $pembeli->id,
+            'verified_pembeli_nama' => $pembeli->nama,
+            'verified_expired'      => Carbon::today()->endOfDay()->toIso8601String(),
+        ]);
+
+        return response()->json([
+            'verified' => true,
+            'nama'     => $pembeli->nama,
+            'expired'  => Carbon::today()->endOfDay()->toIso8601String(),
+        ]);
+    }
+    
     // =============================================
     // STEP 1: Pembeli minta magic link
     // =============================================

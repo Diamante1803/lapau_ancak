@@ -14,7 +14,11 @@
         </span>
         <span class="mx-2" style="color: #ccc;">|</span>
         <span class="text-muted small">
-            {{ ucfirst(auth()->user()->role == 'admin_pusat' ? 'Admin Pusat' : 'Admin Satker') }}
+            @if(auth()->user()->role == 'admin_pusat')
+                Admin Pusat
+            @else
+                Admin {{ auth()->user()->satker->nama_satker ?? 'Satker' }}
+            @endif
         </span>
     </div>
 
@@ -35,7 +39,7 @@
                         {{ auth()->user()->name }}
                     </span>
                     <span class="text-muted" style="font-size: 0.7rem;">
-                        {{ auth()->user()->role == 'admin_pusat' ? '⚙️ Admin Pusat' : '🏢 Admin Satker' }}
+                        {{ auth()->user()->role == 'admin_pusat' ? '⚙️ Admin Pusat' : '🏢 Admin' }}
                         @if(auth()->user()->role == 'admin_satker' && auth()->user()->satker)
                             — {{ auth()->user()->satker->nama_satker }}
                         @endif

@@ -30,7 +30,7 @@
                 @php
                     $stepItems   = [
                         1 => ['label' => 'Info & Dokumen',  'icon' => 'fa-file-alt'],
-                        2 => ['label' => 'Perkara',         'icon' => 'fa-balance-scale'],
+                        2 => ['label' => 'Putusan',         'icon' => 'fa-balance-scale'],
                         3 => ['label' => 'Barang & Foto',   'icon' => 'fa-boxes'],
                         4 => ['label' => 'Review & Submit', 'icon' => 'fa-paper-plane'],
                     ];
@@ -91,6 +91,62 @@
         <script>setTimeout(() => { let a = document.getElementById('autoAlert'); if(a){a.style.opacity='0';setTimeout(()=>a.remove(),500);} }, 4000);</script>
         @endif
 
+        {{-- ================= RIWAYAT REVISI ================= --}}
+                @if($pengajuan->catatan_revisi && count($pengajuan->catatan_revisi) > 0)
+                <div class="card shadow-sm mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
+
+                    <div class="card-header" style="background: linear-gradient(90deg, #856404, #a07800); padding: 12px 20px;">
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="fas fa-history mr-2" style="color: #f6c90e;"></i>
+                            Riwayat Revisi
+                            <span class="badge ml-2"
+                                style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.7rem; padding: 3px 8px;">
+                                {{ count($pengajuan->catatan_revisi) }}x revisi
+                            </span>
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="d-flex overflow-auto" style="gap:0;">
+                            @foreach($pengajuan->catatan_revisi as $idx => $revisi)
+                            <div class="flex-shrink-0 px-4 py-3"
+                                style="min-width:220px; max-width:260px; border-right:1px solid #f0e6c8;
+                                    {{ $idx == count($pengajuan->catatan_revisi) - 1 ? 'background:#fffdf0;' : 'background:white;' }}">
+
+                                <div class="d-flex align-items-center mb-2" style="gap:8px;">
+                                    <div style="
+                                        width:28px; height:28px; border-radius:50%; flex-shrink:0;
+                                        background:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#f6c90e' : '#e9ecef' }};
+                                        color:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#856404' : '#6c757d' }};
+                                        display:flex; align-items:center; justify-content:center;
+                                        font-weight:bold; font-size:0.72rem;">
+                                        {{ $revisi['ke_revisi'] }}
+                                    </div>
+                                    <div class="font-weight-bold small" style="color:#856404;">
+                                        Revisi ke-{{ $revisi['ke_revisi'] }}
+                                        @if($idx == count($pengajuan->catatan_revisi) - 1)
+                                        <span class="badge badge-warning ml-1" style="font-size:0.62rem;border-radius:20px;">
+                                            Terbaru
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <p class="mb-1 small" style="color:#4a4a4a; font-size:0.82rem; line-height:1.4;">
+                                    {{ $revisi['catatan'] }}
+                                </p>
+                                <small class="text-muted" style="font-size:0.72rem;">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
+                                </small>
+
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
+
         {{-- ================= RINGKASAN INFO ================= --}}
         @php
             $isDraft     = $pengajuan->status === 'draft';
@@ -143,8 +199,8 @@
                         ['label' => 'SK Panitia',                   'ok' => (bool) $sk],
                         ['label' => 'Izin Penjualan',               'ok' => (bool) $izin],
                         ['label' => 'Surat Penetapan Harga Limit',  'ok' => (bool) $harga],
-                        ['label' => 'Minimal 1 perkara',            'ok' => $pengajuan->perkaras->count() > 0],
-                        ['label' => 'Semua perkara punya dokumen',  'ok' => $pengajuan->perkaras->every(fn($p) => $p->dokumenPerkara->count() > 0)],
+                        ['label' => 'Minimal 1 putusan perkara',            'ok' => $pengajuan->perkaras->count() > 0],
+                        ['label' => 'Semua putusan perkara punya dokumen',  'ok' => $pengajuan->perkaras->every(fn($p) => $p->dokumenPerkara->count() > 0)],
                         ['label' => 'Minimal 1 barang',             'ok' => $pengajuan->perkaras->sum(fn($p) => $p->barangs->count()) > 0],
                     ];
                     $allOk = collect($checks)->every(fn($c) => $c['ok']);
@@ -202,7 +258,7 @@
 
                     {{-- Dokumen Perkara --}}
                     <h6 class="small font-weight-bold mb-2" style="color:#856404;">
-                        <i class="fas fa-paperclip mr-1"></i> Dokumen Perkara
+                        <i class="fas fa-paperclip mr-1"></i> Dokumen Putusan Perkara
                     </h6>
                     <div class="mb-3">
                         @forelse($perkara->dokumenPerkara as $doc)

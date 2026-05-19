@@ -145,9 +145,19 @@
                 <h2 class="text-2xl font-bold text-gray-800">🔨 Lelang Berlangsung</h2>
                 <p class="text-sm text-gray-500">Klik barang untuk ajukan penawaran</p>
             </div>
+            <div id="carouselControlsAktif" class="flex gap-2">
+                <button onclick="slideCarousel('aktif', -1)" class="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed" id="btnPrevAktif">
+                    <i class="fas fa-chevron-left text-gray-600"></i>
+                </button>
+                <button onclick="slideCarousel('aktif', 1)" class="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed" id="btnNextAktif">
+                    <i class="fas fa-chevron-right text-gray-600"></i>
+                </button>
+            </div>
         </div>
 
-        <div id="gridLelang" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="relative">
+            <div id="carouselAktif" class="overflow-hidden">
+                <div id="gridLelang" class="flex gap-6 transition-transform duration-500">
             @forelse($lelangsAktif as $lelang)
             @php
                 $barang       = $lelang->barang;
@@ -268,6 +278,8 @@
                 <p class="text-lg">Belum ada lelang yang berlangsung saat ini</p>
             </div>
             @endforelse
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -282,9 +294,19 @@
                 <h2 class="text-2xl font-bold text-gray-800">🗓 Lelang Akan Datang</h2>
                 <p class="text-sm text-gray-500">Segera dibuka untuk penawaran</p>
             </div>
+            <div id="carouselControlsMendatang" class="flex gap-2">
+                <button onclick="slideCarousel('mendatang', -1)" class="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed" id="btnPrevMendatang">
+                    <i class="fas fa-chevron-left text-gray-600"></i>
+                </button>
+                <button onclick="slideCarousel('mendatang', 1)" class="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed" id="btnNextMendatang">
+                    <i class="fas fa-chevron-right text-gray-600"></i>
+                </button>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="gridMendatang">
+        <div class="relative">
+            <div id="carouselMendatang" class="overflow-hidden">
+                <div class="flex gap-6 transition-transform duration-500" id="gridMendatang">
 
             @foreach($lelangsMendatang as $lelang)
             @php
@@ -419,6 +441,7 @@
             </div>
             @endforeach
 
+            </div>
         </div>
     </div>
 </section>
@@ -426,13 +449,25 @@
 <style>
     html { scroll-behavior: smooth; }
 
+    /* ── CAROUSEL ── */
+    #gridLelang, #gridMendatang {
+        scroll-behavior: smooth;
+    }
+
+    #gridLelang .lelang-card,
+    #gridMendatang .lelang-card {
+        flex-shrink: 0;
+        width: 320px;
+    }
+
     /* ── LIST MODE ── */
     #gridLelang.list-mode,
     #gridMendatang.list-mode {
-        grid-template-columns: 1fr !important;
+        flex-direction: column;
     }
     #gridLelang.list-mode .lelang-card,
     #gridMendatang.list-mode .lelang-card {
+        width: 100%;
         display: flex;
         flex-direction: row;
     }
@@ -463,11 +498,97 @@
     }
 
     @media (max-width: 640px) {
+        #gridLelang .lelang-card,
+        #gridMendatang .lelang-card {
+            width: 280px;
+        }
+
         #gridLelang.list-mode .card-image { width: 120px; min-width: 120px; }
     }
 </style>
 
 <script>
+// ===== CAROUSEL =====
+const carouselState = {
+    aktif: { current: 0, perView: 3, total: 0 },
+    mendatang: { current: 0, perView: 3, total: 0 }
+};
+
+const CARD_WIDTH = 320;
+const GAP = 24;
+
+function updateCarouselState() {
+    const getVisibleCount = (gridId) => {
+        const grid = document.getElementById(gridId);
+        if (!grid) return 0;
+        return grid.querySelectorAll('.lelang-card:not([style*="display: none"])').length;
+    };
+
+    carouselState.aktif.total = getVisibleCount('gridLelang');
+    carouselState.mendatang.total = getVisibleCount('gridMendatang');
+
+    const width = window.innerWidth;
+    if (width < 768) {
+        carouselState.aktif.perView = 1;
+        carouselState.mendatang.perView = 1;
+    } else if (width < 1024) {
+        carouselState.aktif.perView = 2;
+        carouselState.mendatang.perView = 2;
+    } else {
+        carouselState.aktif.perView = 3;
+        carouselState.mendatang.perView = 3;
+    }
+
+    carouselState.aktif.current = 0;
+    carouselState.mendatang.current = 0;
+    updateCarouselButtons();
+}
+
+function slideCarousel(type, direction) {
+    const state = carouselState[type];
+    const maxScroll = Math.max(0, state.total - state.perView);
+
+    state.current += direction;
+    state.current = Math.max(0, Math.min(state.current, maxScroll));
+
+    const grid = type === 'aktif' ? document.getElementById('gridLelang') : document.getElementById('gridMendatang');
+
+    // Hitung offset berdasarkan card visible
+    let offset = 0;
+    let visibleCount = 0;
+    const cards = grid.querySelectorAll('.lelang-card');
+
+    for (let i = 0; i < cards.length && visibleCount < state.current; i++) {
+        if (cards[i].style.display !== 'none') {
+            offset += CARD_WIDTH + GAP;
+            visibleCount++;
+        }
+    }
+
+    grid.style.transform = `translateX(-${offset}px)`;
+    updateCarouselButtons();
+}
+
+function updateCarouselButtons() {
+    const updateBtn = (type, prevBtnId, nextBtnId) => {
+        const state = carouselState[type];
+        const maxScroll = Math.max(0, state.total - state.perView);
+
+        const prevBtn = document.getElementById(prevBtnId);
+        const nextBtn = document.getElementById(nextBtnId);
+
+        if (prevBtn) prevBtn.disabled = state.current === 0;
+        if (nextBtn) nextBtn.disabled = state.current >= maxScroll;
+    };
+
+    updateBtn('aktif', 'btnPrevAktif', 'btnNextAktif');
+    updateBtn('mendatang', 'btnPrevMendatang', 'btnNextMendatang');
+}
+
+window.addEventListener('resize', () => {
+    updateCarouselState();
+});
+
 // ===== SLIDESHOW =====
 const pubSlideIdx = {};
 
@@ -602,7 +723,7 @@ function updateStartCountdowns() {
             const flagKey = 'reloaded_start_' + el.dataset.start;
             if (!localStorage.getItem(flagKey)) {
                 localStorage.setItem(flagKey, '1');
-                setTimeout(() => window.location.reload(), 2000);
+                setTimeout(() => window.location.reload(), 1500);
             }
 
             return;
@@ -707,6 +828,12 @@ function applyFilters() {
     document.getElementById('countVisible').textContent = visible;
     const empty = document.getElementById('emptyLelang');
     if (empty) empty.style.display = visible === 0 ? '' : 'none';
+
+    // Reset carousel setelah filter
+    carouselState.aktif.current = 0;
+    const grid = document.getElementById('gridLelang');
+    if (grid) grid.style.transform = 'translateX(0)';
+    updateCarouselState();
 }
 
 // ===== DROPDOWN HERO (SATKER) =====
@@ -808,6 +935,9 @@ document.addEventListener('click', function(e) {
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        updateCarouselState();
+    }, 100);
     applyFilters();
 });
 </script>

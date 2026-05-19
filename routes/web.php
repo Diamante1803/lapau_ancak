@@ -37,6 +37,7 @@ Route::get('/lelang/{lelang}', [PublicController::class, 'detail'])->name('publi
 Route::get('/satker/{satker}', [PublicController::class, 'satker'])->name('public.satker');
 
 // routes/web.php
+Route::get('/pembeli/cek-token', [PenawaranController::class, 'cekToken']);
 Route::post('/lelang/{lelang}/magic-link', [PenawaranController::class, 'requestMagicLink'])
     ->name('public.magic-link');
 

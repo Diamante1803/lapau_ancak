@@ -36,7 +36,7 @@
                 @php
                     $stepItems = [
                         1 => ['label' => 'Info & Dokumen',    'icon' => 'fa-file-alt'],
-                        2 => ['label' => 'Perkara',           'icon' => 'fa-balance-scale'],
+                        2 => ['label' => 'Putusan',           'icon' => 'fa-balance-scale'],
                         3 => ['label' => 'Barang & Foto',     'icon' => 'fa-boxes'],
                         4 => ['label' => 'Review & Submit',   'icon' => 'fa-paper-plane'],
                     ];
@@ -138,55 +138,60 @@
         @endif
 
         {{-- ================= RIWAYAT REVISI ================= --}}
-        @if($pengajuan->catatan_revisi && count($pengajuan->catatan_revisi) > 0)
-        <div class="card shadow-sm mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
-            <div class="card-header" style="background: linear-gradient(90deg, #856404, #a07800); padding: 12px 20px;">
-                <h6 class="m-0 font-weight-bold text-white">
-                    <i class="fas fa-history mr-2" style="color: #f6c90e;"></i>
-                    Riwayat Revisi
-                    <span class="badge ml-2"
-                        style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.7rem;">
-                        {{ count($pengajuan->catatan_revisi) }}x revisi
-                    </span>
-                    @if($pengajuan->status != 'revision')
-                    <span class="badge ml-1"
-                        style="background: rgba(255,255,255,0.15); color: #ffe082; font-size: 0.65rem; border-radius: 20px;">
-                        sudah disubmit ulang
-                    </span>
-                    @endif
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                @foreach(array_reverse($pengajuan->catatan_revisi) as $idx => $revisi)
-                <div class="px-4 py-3 {{ $idx > 0 ? 'border-top' : '' }}"
-                    style="{{ $idx == 0 ? 'background: #fffdf0;' : 'background: white;' }}">
-                    <div class="d-flex align-items-start" style="gap: 12px;">
-                        <div style="min-width:32px; height:32px; border-radius:50%;
-                            background: {{ $idx == 0 ? '#f6c90e' : '#e9ecef' }};
-                            color: {{ $idx == 0 ? '#856404' : '#6c757d' }};
-                            display:flex; align-items:center; justify-content:center;
-                            font-weight:bold; font-size:0.75rem; flex-shrink:0;">
-                            {{ $revisi['ke_revisi'] }}
-                        </div>
-                        <div>
-                            <div class="font-weight-bold small mb-1" style="color: #856404;">
-                                Revisi ke-{{ $revisi['ke_revisi'] }}
-                                @if($idx == 0)
-                                <span class="badge badge-warning ml-1" style="font-size:0.65rem; border-radius:20px;">Terbaru</span>
-                                @endif
+                @if($pengajuan->catatan_revisi && count($pengajuan->catatan_revisi) > 0)
+                <div class="card shadow-sm mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
+
+                    <div class="card-header" style="background: linear-gradient(90deg, #856404, #a07800); padding: 12px 20px;">
+                        <h6 class="m-0 font-weight-bold text-white">
+                            <i class="fas fa-history mr-2" style="color: #f6c90e;"></i>
+                            Riwayat Revisi
+                            <span class="badge ml-2"
+                                style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.7rem; padding: 3px 8px;">
+                                {{ count($pengajuan->catatan_revisi) }}x revisi
+                            </span>
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="d-flex overflow-auto" style="gap:0;">
+                            @foreach($pengajuan->catatan_revisi as $idx => $revisi)
+                            <div class="flex-shrink-0 px-4 py-3"
+                                style="min-width:220px; max-width:260px; border-right:1px solid #f0e6c8;
+                                    {{ $idx == count($pengajuan->catatan_revisi) - 1 ? 'background:#fffdf0;' : 'background:white;' }}">
+
+                                <div class="d-flex align-items-center mb-2" style="gap:8px;">
+                                    <div style="
+                                        width:28px; height:28px; border-radius:50%; flex-shrink:0;
+                                        background:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#f6c90e' : '#e9ecef' }};
+                                        color:{{ $idx == count($pengajuan->catatan_revisi) - 1 ? '#856404' : '#6c757d' }};
+                                        display:flex; align-items:center; justify-content:center;
+                                        font-weight:bold; font-size:0.72rem;">
+                                        {{ $revisi['ke_revisi'] }}
+                                    </div>
+                                    <div class="font-weight-bold small" style="color:#856404;">
+                                        Revisi ke-{{ $revisi['ke_revisi'] }}
+                                        @if($idx == count($pengajuan->catatan_revisi) - 1)
+                                        <span class="badge badge-warning ml-1" style="font-size:0.62rem;border-radius:20px;">
+                                            Terbaru
+                                        </span>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <p class="mb-1 small" style="color:#4a4a4a; font-size:0.82rem; line-height:1.4;">
+                                    {{ $revisi['catatan'] }}
+                                </p>
+                                <small class="text-muted" style="font-size:0.72rem;">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
+                                </small>
+
                             </div>
-                            <p class="mb-1 small" style="color: #4a4a4a;">{{ $revisi['catatan'] }}</p>
-                            <small class="text-muted">
-                                <i class="fas fa-clock mr-1"></i>
-                                {{ \Carbon\Carbon::parse($revisi['tanggal'])->format('d M Y, H:i') }}
-                            </small>
+                            @endforeach
                         </div>
                     </div>
                 </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
+                @endif
 
         {{-- ================= FORM INFO PENGAJUAN ================= --}}
         <div class="card shadow mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
@@ -240,54 +245,6 @@
                 </h6>
             </div>
             <div class="card-body">
-
-                {{-- Form Upload --}}
-                @if($canEdit)
-                <form method="POST" action="{{ route('satker.pengajuan.uploadDokumen', $pengajuan) }}"
-                    enctype="multipart/form-data">
-                    @csrf
-                    <div class="card mb-4" style="border: 1px dashed #b2d8c0; border-radius: 10px; background: #f8fff9;">
-                        <div class="card-body">
-                            <h6 class="font-weight-bold mb-3" style="color: #1a6b3c;">
-                                <i class="fas fa-upload mr-2"></i>Upload Dokumen
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-5">
-                                    <div class="form-group mb-2">
-                                        <label class="small font-weight-bold text-muted">Jenis Dokumen</label>
-                                        <select name="jenis"
-                                            class="form-control form-control-sm @error('jenis') is-invalid @enderror"
-                                            style="border-radius: 6px;">
-                                            <option value="sk_panitia">SK Panitia</option>
-                                            <option value="izin_penjualan">Izin Penjualan</option>
-                                            <option value="surat_penetapan_harga">Surat Penetapan Harga Limit</option>
-                                        </select>
-                                        @error('jenis')<small class="text-danger">{{ $message }}</small>@enderror
-                                    </div>
-                                </div>
-                                <div class="col-md-5">
-                                    <div class="form-group mb-2">
-                                        <label class="small font-weight-bold text-muted">File PDF</label>
-                                        <input type="file" name="file[]" multiple
-                                            accept=".pdf"
-                                            class="form-control form-control-sm @error('file') is-invalid @enderror"
-                                            style="border-radius: 6px;">
-                                        <small class="text-muted">PDF, maks. 2MB</small>
-                                        @error('file')<small class="text-danger d-block">{{ $message }}</small>@enderror
-                                    </div>
-                                </div>
-                                <div class="col-md-2 d-flex align-items-end">
-                                    <button class="btn btn-sm btn-block mb-2 font-weight-bold"
-                                        style="background: #1a6b3c; color: white; border-radius: 6px;">
-                                        <i class="fas fa-upload mr-1"></i> Upload
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-                @endif
-
                 {{-- Progress Kelengkapan --}}
                 @php
                     $sk      = $pengajuan->dokumenPengajuan->where('jenis','sk_panitia')->first();
@@ -296,6 +253,113 @@
                     $done    = collect([$sk, $izin, $harga])->filter()->count();
                     $percent = round(($done / 3) * 100);
                 @endphp
+
+                @if($canEdit)
+                <form method="POST" action="{{ route('satker.pengajuan.uploadDokumen', $pengajuan) }}"
+                    enctype="multipart/form-data">
+                    @csrf
+                    <div class="card mb-4" style="border:1px dashed #b2d8c0;border-radius:10px;background:#f8fff9;">
+                        <div class="card-body">
+                            <h6 class="font-weight-bold mb-3" style="color:#1a6b3c;">
+                                <i class="fas fa-upload mr-2"></i>Upload Dokumen Pengajuan
+                            </h6>
+
+                            <div class="row">
+                                {{-- SK Panitia --}}
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label class="small font-weight-bold text-muted d-flex align-items-center justify-content-between">
+                                            SK Panitia
+                                            @if($sk)
+                                            <span style="color:#1a6b3c;font-weight:normal;font-size:0.7rem;">
+                                                <i class="fas fa-check-circle mr-1"></i>Sudah ada
+                                            </span>
+                                            @else
+                                            <span class="text-danger" style="font-size:0.7rem;">Belum upload</span>
+                                            @endif
+                                        </label>
+                                        <input type="file" name="files[sk_panitia]"
+                                            accept=".pdf"
+                                            class="form-control form-control-sm"
+                                            style="border-radius:6px;">
+                                        @if($sk)
+                                        <small class="text-muted" style="font-size:0.7rem;">
+                                            Upload baru untuk mengganti —
+                                            <a href="{{ asset('storage/'.$sk->file_path) }}" target="_blank" style="color:#1a6b3c;">lihat file</a>
+                                        </small>
+                                        @else
+                                        <small class="text-muted">PDF, maks. 2MB</small>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Izin Penjualan --}}
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label class="small font-weight-bold text-muted d-flex align-items-center justify-content-between">
+                                            Izin Penjualan
+                                            @if($izin)
+                                            <span style="color:#1a6b3c;font-weight:normal;font-size:0.7rem;">
+                                                <i class="fas fa-check-circle mr-1"></i>Sudah ada
+                                            </span>
+                                            @else
+                                            <span class="text-danger" style="font-size:0.7rem;">Belum upload</span>
+                                            @endif
+                                        </label>
+                                        <input type="file" name="files[izin_penjualan]"
+                                            accept=".pdf"
+                                            class="form-control form-control-sm"
+                                            style="border-radius:6px;">
+                                        @if($izin)
+                                        <small class="text-muted" style="font-size:0.7rem;">
+                                            Upload baru untuk mengganti —
+                                            <a href="{{ asset('storage/'.$izin->file_path) }}" target="_blank" style="color:#1a6b3c;">lihat file</a>
+                                        </small>
+                                        @else
+                                        <small class="text-muted">PDF, maks. 2MB</small>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                {{-- Surat Penetapan Harga --}}
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label class="small font-weight-bold text-muted d-flex align-items-center justify-content-between">
+                                            Surat Penetapan Harga Limit
+                                            @if($harga)
+                                            <span style="color:#1a6b3c;font-weight:normal;font-size:0.7rem;">
+                                                <i class="fas fa-check-circle mr-1"></i>Sudah ada
+                                            </span>
+                                            @else
+                                            <span class="text-danger" style="font-size:0.7rem;">Belum upload</span>
+                                            @endif
+                                        </label>
+                                        <input type="file" name="files[surat_penetapan_harga]"
+                                            accept=".pdf"
+                                            class="form-control form-control-sm"
+                                            style="border-radius:6px;">
+                                        @if($harga)
+                                        <small class="text-muted" style="font-size:0.7rem;">
+                                            Upload baru untuk mengganti —
+                                            <a href="{{ asset('storage/'.$harga->file_path) }}" target="_blank" style="color:#1a6b3c;">lihat file</a>
+                                        </small>
+                                        @else
+                                        <small class="text-muted">PDF, maks. 2MB</small>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-sm font-weight-bold"
+                                style="background:#1a6b3c;color:white;border-radius:6px;padding:6px 20px;">
+                                <i class="fas fa-upload mr-1"></i> Upload Semua Dokumen
+                            </button>
+                            <small class="text-muted ml-2">Hanya file yang dipilih yang akan diupload</small>
+
+                        </div>
+                    </div>
+                </form>
+                @endif
 
                 <div class="mb-4">
                     <div class="d-flex justify-content-between mb-1">
@@ -387,13 +451,13 @@
             <a href="{{ route('satker.pengajuan.step2', $pengajuan) }}"
                 class="btn btn-sm font-weight-bold"
                 style="background: #1a6b3c; color: white; border-radius: 8px; padding: 8px 24px;">
-                Lanjut ke Perkara <i class="fas fa-arrow-right ml-1"></i>
+                Lanjut ke Putusan Perkara <i class="fas fa-arrow-right ml-1"></i>
             </a>
             @else
             <button disabled class="btn btn-sm font-weight-bold"
                 style="background: #ccc; color: white; border-radius: 8px; padding: 8px 24px;
                        cursor: not-allowed;" title="Lengkapi judul dan 3 dokumen terlebih dahulu">
-                Lanjut ke Perkara <i class="fas fa-arrow-right ml-1"></i>
+                Lanjut ke Putusan Perkara <i class="fas fa-arrow-right ml-1"></i>
             </button>
             @endif
         </div>

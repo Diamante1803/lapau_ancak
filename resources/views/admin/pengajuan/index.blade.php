@@ -294,7 +294,7 @@
                             class="form-control"
                             placeholder="Masukkan judul pengajuan..."
                             style="border-radius: 8px;" required>
-                        <small class="text-muted">Contoh: Pengajuan Lelang Aset Sitaan Perkara No. 001/2026</small>
+                        <small class="text-muted">Contoh: Penyelesaian KN Padang Mei 2026</small>
                     </div>
                 </div>
 

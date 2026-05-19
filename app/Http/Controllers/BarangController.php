@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Str;
 use App\Models\Perkara;
 use App\Models\Barang;
@@ -101,36 +102,69 @@ class BarangController extends Controller
     public function uploadFotoBarang(Request $request, Barang $barang)
     {
         if (!$request->hasFile('foto')) {
-        return back()->with('error', 'Tidak ada file');
-    }
+            return back()->with('error', 'Tidak ada file.');
+        }
 
-    $jumlahLama = $barang->fotoBarang()->count();
-    $jumlahBaru = count($request->file('foto'));
-
-    // 🔥 cek total maksimal 5 (gabungan lama + baru)
-    if (($jumlahLama + $jumlahBaru) > 5) {
-        return back()->with('error', 'Maksimal 5 foto per barang');
-    }
-
-    $namaBarang = \Illuminate\Support\Str::slug($barang->nama_barang);
-
-    foreach ($request->file('foto') as $index => $file) {
-
-        $ext = $file->getClientOriginalExtension();
-
-        // 🔥 format nama file: nama_barang_urut_time.ext
-        $fileName = $namaBarang . '_' . ($jumlahLama + $index + 1) . '_' . time() . '.' . $ext;
-
-        $path = $file->storeAs('foto_barang', $fileName, 'public');
-
-        FotoBarang::create([
-            'barang_id' => $barang->id,
-            'file_path' => $path
+        $request->validate([
+            'foto'   => 'required|array',
+            'foto.*' => 'file|mimes:jpg,jpeg,png|max:5120', // max 5MB sebelum dikompres
+        ], [
+            'foto.*.mimes' => 'Format foto harus JPG atau PNG.',
+            'foto.*.max'   => 'Ukuran foto maksimal 5MB.',
         ]);
+
+        $jumlahLama = $barang->fotoBarang()->count();
+        $jumlahBaru = count($request->file('foto'));
+
+        if (($jumlahLama + $jumlahBaru) > 5) {
+            return back()->with('error', 'Maksimal 5 foto per barang. Saat ini sudah ada ' . $jumlahLama . ' foto.');
+        }
+
+        $namaBarang = Str::slug($barang->nama_barang);
+
+        // Batas ukuran aman — jika di bawah ini langsung upload tanpa kompres
+        $batasAman = 800 * 1024; // 800KB
+
+        // Target ukuran setelah kompres
+        $maxWidth  = 1920; // px
+        $maxHeight = 1080; // px
+        $quality   = 80;   // % kualitas JPG
+
+        foreach ($request->file('foto') as $index => $file) {
+            $ukuranAsli = $file->getSize();
+            $ext        = strtolower($file->getClientOriginalExtension());
+            $fileName   = $namaBarang . '_' . ($jumlahLama + $index + 1) . '_' . time() . '.jpg'; // selalu simpan sebagai jpg
+            $path       = 'foto_barang/' . $fileName;
+
+            if ($ukuranAsli <= $batasAman) {
+                // ✅ Ukuran aman — upload langsung tanpa kompres
+                $file->storeAs('foto_barang', $fileName, 'public');
+            } else {
+                // 🔄 Ukuran terlalu besar — kompres dulu
+                $image = Image::read($file);
+
+                // Resize jika lebar atau tinggi melebihi batas
+                // scale down proporsional, tidak distorsi
+                if ($image->width() > $maxWidth || $image->height() > $maxHeight) {
+                    $image->scaleDown($maxWidth, $maxHeight);
+                }
+
+                // Simpan ke storage dengan kualitas terkompresi
+                Storage::disk('public')->put(
+                    $path,
+                    $image->toJpeg($quality)
+                );
+            }
+
+            FotoBarang::create([
+                'barang_id' => $barang->id,
+                'file_path' => $path,
+            ]);
+        }
+
+        return back()->with('success', 'Foto berhasil diupload.');
     }
 
-    return back()->with('success', 'Foto berhasil diupload');
-    }
 
     public function destroyFoto($id)
     {

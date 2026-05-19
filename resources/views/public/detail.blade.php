@@ -398,16 +398,46 @@ window._verifiedExpired = null;
 @endif
 
 // 2. Fungsi modal
-function bukaModal() {
-    const verified = window._verifiedNama;
-    const expired  = window._verifiedExpired;
-    const now      = new Date().getTime();
+async function bukaModal() {
+    const verified  = window._verifiedNama;
+    const expired   = window._verifiedExpired;
+    const now       = new Date().getTime();
+    const sessionOk = verified && expired && now < new Date(expired).getTime();
 
-    if (verified && expired && now < new Date(expired).getTime()) {
+    if (sessionOk) {
+        // Session masih valid — langsung ke step 2
         document.getElementById('namaVerifikasi').textContent = verified;
         document.getElementById('step1').classList.add('hidden');
         document.getElementById('step2').classList.remove('hidden');
     } else {
+        // ✅ Cek email tersimpan di localStorage
+        const emailTersimpan = localStorage.getItem('lapau_email');
+
+        if (emailTersimpan) {
+            // Cek ke server apakah token masih valid
+            try {
+                const res  = await fetch(`/pembeli/cek-token?email=${encodeURIComponent(emailTersimpan)}`);
+                const data = await res.json();
+
+                if (data.verified) {
+                    // Token masih valid — langsung step 2
+                    window._verifiedNama    = data.nama;
+                    window._verifiedExpired = data.expired;
+                    document.getElementById('namaVerifikasi').textContent = data.nama;
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+
+                    const m = document.getElementById('modalPenawaran');
+                    m.classList.remove('hidden');
+                    m.classList.add('flex');
+                    return;
+                }
+            } catch (e) {
+                console.log('Cek token gagal:', e);
+            }
+        }
+
+        // Token tidak valid / tidak ada — tampil step 1
         document.getElementById('step1').classList.remove('hidden');
         document.getElementById('step2').classList.add('hidden');
     }
@@ -440,6 +470,7 @@ async function kirimMagicLink() {
     err.classList.add('hidden');
     btn.disabled    = true;
     btn.textContent = 'Mengirim...';
+    localStorage.setItem('lapau_email', email);
 
     try {
         const res = await fetch('/lelang/{{ $lelang->id }}/magic-link', {

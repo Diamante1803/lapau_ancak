@@ -35,7 +35,6 @@ class PublicController extends Controller
             })
             ->orderByRaw("FIELD(status, 'active', 'closed')")
             ->orderBy('tanggal_selesai', 'asc')
-            ->take(6)
             ->get();
 
         $lelangsMendatang = Lelang::with([
@@ -44,7 +43,6 @@ class PublicController extends Controller
             ])
             ->where('status', 'scheduled')
             ->orderBy('tanggal_mulai', 'asc')
-            ->take(6)
             ->get();
 
         return view('public.index', compact('satkers', 'stats', 'lelangsAktif', 'lelangsMendatang'));

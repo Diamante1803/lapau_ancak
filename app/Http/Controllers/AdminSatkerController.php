@@ -101,50 +101,55 @@ class AdminSatkerController extends Controller
     public function uploadDokumenPengajuan(Request $request, PengajuanLelang $pengajuan)
     {
         $request->validate([
-            'jenis' => 'required|in:sk_panitia,izin_penjualan,surat_penetapan_harga',
-            'file' => 'required',
-            'file.*' => 'file|mimes:pdf|max:2048' // hapus jpg,jpeg,png
+            'sk_panitia'            => 'nullable|file|mimes:pdf|max:2048',
+            'izin_penjualan'        => 'nullable|file|mimes:pdf|max:2048',
+            'surat_penetapan_harga' => 'nullable|file|mimes:pdf|max:2048',
         ], [
-            // Custom error message
-            'file.required' => 'File wajib diupload.',
-            'file.*.mimes' => 'File harus berformat PDF.',
-            'file.*.max' => 'Ukuran file maksimal 2MB.',
+            '*.mimes' => 'File harus berformat PDF.',
+            '*.max'   => 'Ukuran file maksimal 2MB.',
         ]);
 
-        // 🔥 CEK DUPLIKAT
-        $cek = DokumenPengajuan::where('pengajuan_lelang_id', $pengajuan->id)
-            ->where('jenis', $request->jenis)
-            ->exists();
-
-        if ($cek) {
-            $jenisLabel = Str::of($request->jenis)
-                ->replace('_', ' ')
-                ->title();
-
-            return back()->with('error', $jenisLabel . ' sudah diupload!');
+        // Pastikan minimal 1 file diupload
+        if (!$request->hasFile('files.sk_panitia') &&
+            !$request->hasFile('files.izin_penjualan') &&
+            !$request->hasFile('files.surat_penetapan_harga')) {
+            return back()->with('error', 'Pilih minimal 1 file untuk diupload.');
         }
 
         $namaSatker = Str::slug($pengajuan->satker->nama_satker);
-        $jenis = $request->jenis; // contoh: sk_panitia
+        $uploaded   = [];
 
-        foreach ($request->file('file') as $file) {
+        $jenisList = ['sk_panitia', 'izin_penjualan', 'surat_penetapan_harga'];
 
-            $ext = $file->getClientOriginalExtension();
+        foreach ($jenisList as $jenis) {
+            if (!$request->hasFile('files.' . $jenis)) continue;
 
-            // format nama file
+            // Cek duplikat
+            $sudahAda = DokumenPengajuan::where('pengajuan_lelang_id', $pengajuan->id)
+                ->where('jenis', $jenis)
+                ->exists();
+
+            if ($sudahAda) {
+                $label = Str::of($jenis)->replace('_', ' ')->title();
+                return back()->with('error', $label . ' sudah diupload sebelumnya.');
+            }
+
+            $file     = $request->file('files.' . $jenis);
+            $ext      = $file->getClientOriginalExtension();
             $namaFile = $jenis . '_' . $namaSatker . '_' . time() . '.' . $ext;
-
-            // simpan file
-            $path = $file->storeAs('pengajuan', $namaFile, 'public');
+            $path     = $file->storeAs('pengajuan', $namaFile, 'public');
 
             DokumenPengajuan::create([
                 'pengajuan_lelang_id' => $pengajuan->id,
-                'jenis' => $jenis,
-                'file_path' => $path
+                'jenis'               => $jenis,
+                'file_path'           => $path,
             ]);
+
+            $uploaded[] = Str::of($jenis)->replace('_', ' ')->title();
         }
 
-        return back()->with('success', 'Dokumen berhasil diupload.');
+        $namaUpload = implode(', ', $uploaded);
+        return back()->with('success', $namaUpload . ' berhasil diupload.');
     }
 
     public function destroyDokumenPengajuan(DokumenPengajuan $dokumen)
