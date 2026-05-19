@@ -454,6 +454,15 @@
         scroll-behavior: smooth;
     }
 
+    #carouselAktif, #carouselMendatang {
+        cursor: grab;
+        user-select: none;
+    }
+
+    #carouselAktif.grabbing, #carouselMendatang.grabbing {
+        cursor: grabbing;
+    }
+
     #gridLelang .lelang-card,
     #gridMendatang .lelang-card {
         flex-shrink: 0;
@@ -516,6 +525,14 @@ const carouselState = {
 
 const CARD_WIDTH = 320;
 const GAP = 24;
+const SWIPE_THRESHOLD = 50;
+
+let touchState = {
+    startX: 0,
+    startY: 0,
+    isDragging: false,
+    activeCarousel: null
+};
 
 function updateCarouselState() {
     const getVisibleCount = (gridId) => {
@@ -588,6 +605,70 @@ function updateCarouselButtons() {
 window.addEventListener('resize', () => {
     updateCarouselState();
 });
+
+// ===== TOUCH SWIPE =====
+function initTouchSwipe() {
+    const carouselAktif = document.getElementById('carouselAktif');
+    const carouselMendatang = document.getElementById('carouselMendatang');
+
+    if (carouselAktif) {
+        carouselAktif.addEventListener('touchstart', handleTouchStart, false);
+        carouselAktif.addEventListener('touchmove', handleTouchMove, false);
+        carouselAktif.addEventListener('touchend', handleTouchEnd, false);
+    }
+
+    if (carouselMendatang) {
+        carouselMendatang.addEventListener('touchstart', handleTouchStart, false);
+        carouselMendatang.addEventListener('touchmove', handleTouchMove, false);
+        carouselMendatang.addEventListener('touchend', handleTouchEnd, false);
+    }
+}
+
+function handleTouchStart(e) {
+    const carousel = e.currentTarget;
+    const carouselType = carousel.id === 'carouselAktif' ? 'aktif' : 'mendatang';
+
+    touchState.startX = e.touches[0].clientX;
+    touchState.startY = e.touches[0].clientY;
+    touchState.isDragging = true;
+    touchState.activeCarousel = carouselType;
+
+    carousel.classList.add('grabbing');
+}
+
+function handleTouchMove(e) {
+    if (!touchState.isDragging) return;
+
+    // Optional: bisa tambahkan visual feedback di sini
+    // e.preventDefault();
+}
+
+function handleTouchEnd(e) {
+    const carousel = e.currentTarget;
+    carousel.classList.remove('grabbing');
+
+    if (!touchState.isDragging) return;
+
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const diffX = touchState.startX - endX;
+    const diffY = Math.abs(touchState.startY - endY);
+
+    touchState.isDragging = false;
+
+    // Ensure swipe is horizontal (not vertical scroll)
+    if (Math.abs(diffX) > SWIPE_THRESHOLD && diffY < 50) {
+        if (diffX > 0) {
+            // Swipe left → next
+            slideCarousel(touchState.activeCarousel, 1);
+        } else {
+            // Swipe right → prev
+            slideCarousel(touchState.activeCarousel, -1);
+        }
+    }
+
+    touchState.activeCarousel = null;
+}
 
 // ===== SLIDESHOW =====
 const pubSlideIdx = {};
@@ -937,6 +1018,7 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         updateCarouselState();
+        initTouchSwipe();
     }, 100);
     applyFilters();
 });
