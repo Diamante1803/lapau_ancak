@@ -39,9 +39,9 @@ class SatkerSeeder extends Seeder
 
             // 1. Buat user admin untuk satker ini
             $adminUser = User::create([
-                'name'     => 'Admin ' . $namaSatker,
+                'name'     => $namaSatker,
                 'email'    => 'admin.satker' . ($index + 1) . '@lelang.test',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('adminsatker'),
                 'role'     => 'admin_satker', // sesuaikan dengan kolom role di tabel users
             ]);
 

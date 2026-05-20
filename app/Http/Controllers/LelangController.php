@@ -19,15 +19,7 @@ class LelangController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        $lelangs = Lelang::with(['barang.foto'])
-        ->whereIn('status', ['active', 'scheduled']) // tampilkan yg siap & sedang lelang
-        ->latest()
-        ->get();
 
-        return view('public.lelang-list', compact('lelangs'));
-    }
 
     public function dashboard()
     {
@@ -176,18 +168,6 @@ class LelangController extends Controller
  
         return view('admin.lelang.detail', compact('lelang'));
     }
-
-    public function show(Lelang $lelang)
-    {
-        $lelang->load([
-            'barang.fotoBarang',
-            'barang.perkara.pengajuan.satker',
-            'penawarans' => fn($q) => $q->orderByDesc('nilai_penawaran'),
-        ]);
-
-        return view('admin.lelang.show', compact('lelang'));
-    }
-
 
     public function aktifkan($id)// Aktifkan Lelang
     {
@@ -383,5 +363,39 @@ class LelangController extends Controller
         );
     }
 
+    public function batalAktif(Lelang $lelang)
+    {
+        if (!in_array($lelang->status, ['scheduled', 'active'])) {
+            return back()->with('error', 'Lelang tidak dapat dibatalkan.');
+        }
+
+        $statusAsal = $lelang->status;
+        $namaBarang = $lelang->barang->nama_barang;
+
+        // Jika sempat aktif, bersihkan semua jejak lelang
+        if ($statusAsal === 'active') {
+            // Hapus semua penawaran
+            $lelang->penawarans()->delete();
+
+            // Reset pemenang & harga tertinggi
+            $lelang->update([
+                'status'          => 'cancelled',
+                'pemenang_id'     => null,
+                'harga_tertinggi' => null,
+            ]);
+        } else {
+            $lelang->update(['status' => 'cancelled']);
+        }
+
+        // Reset status barang
+        $lelang->barang->update(['status' => 'available']);
+
+        $label = $statusAsal === 'active' ? 'berlangsung' : 'terjadwal';
+
+        return back()->with('success',
+            'Lelang "' . $namaBarang . '" yang sedang ' . $label . ' berhasil dibatalkan' .
+            ($statusAsal === 'active' ? ' beserta seluruh penawaran yang masuk.' : '.')
+        );
+    }
 
 }

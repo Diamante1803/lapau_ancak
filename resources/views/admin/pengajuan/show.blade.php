@@ -69,22 +69,6 @@
         <div class="d-flex align-items-center" style="gap:8px; flex-shrink:0;">
             <x-badge-status-pengajuan :status="$pengajuan->status" />
 
-            @if($isSatker && $canEditSatker)
-            <form method="POST" action="{{ route('satker.pengajuan.submit', $pengajuan) }}" id="formSubmitHeader">
-                @csrf
-                <button type="button" class="btn-aksi-hijau"
-                    onclick="swalSubmitForm('formSubmitHeader', {
-                        title: 'Kirim Pengajuan?',
-                        text: 'Pengajuan akan dikirim ke Admin Pusat untuk direview.',
-                        icon: 'question',
-                        confirmText: 'Ya, Kirim',
-                        confirmColor: '#1a6b3c'
-                    })">
-                    <i class="fas fa-paper-plane mr-1"></i> Submit
-                </button>
-            </form>
-            @endif
-
             @if($isPusat && $isSubmitted)
             <form method="POST" action="{{ route('admin.pengajuan.approve', $pengajuan->id) }}" id="formApproveHeader">
                 @csrf
@@ -108,23 +92,6 @@
                     onclick="swalSubmitForm('formHapusHeader', {
                         title: 'Hapus Pengajuan?',
                         text: 'Semua data terkait akan ikut terhapus permanen.',
-                        icon: 'warning',
-                        confirmText: 'Ya, Hapus',
-                        confirmColor: '#e74a3b'
-                    })">
-                    <i class="fas fa-trash mr-1"></i> Hapus
-                </button>
-            </form>
-            @endif
-
-            @if($isSatker && $isDraft)
-            <form action="{{ route('satker.pengajuan.destroy', $pengajuan->id) }}"
-                method="POST" id="formHapusDraft">
-                @csrf @method('DELETE')
-                <button type="button" class="btn-aksi-merah"
-                    onclick="swalSubmitForm('formHapusDraft', {
-                        title: 'Hapus Pengajuan?',
-                        text: 'Pengajuan beserta semua datanya akan dihapus permanen.',
                         icon: 'warning',
                         confirmText: 'Ya, Hapus',
                         confirmColor: '#e74a3b'
@@ -248,62 +215,7 @@
                         </div>
                         <small class="text-muted">{{ $pct }}% lengkap</small>
                     </div>
-
-                    {{-- Upload form --}}
-                    @if($canEditSatker)
-                    <form method="POST" action="{{ route('satker.pengajuan.uploadDokumen', $pengajuan) }}"
-                        enctype="multipart/form-data" class="mb-4">
-                        @csrf
-                        <div style="border:1px dashed #b2d8c0;border-radius:10px;background:#f8fff9;padding:14px;">
-                            <div class="font-weight-bold small mb-3" style="color:#1a6b3c;">
-                                <i class="fas fa-upload mr-1"></i> Upload Dokumen
-                            </div>
-                            <div class="row">
-                                @foreach([
-                                    ['key'=>'sk_panitia',            'label'=>'SK Panitia',                  'doc'=>$sk],
-                                    ['key'=>'izin_penjualan',        'label'=>'Izin Penjualan',              'doc'=>$izin],
-                                    ['key'=>'surat_penetapan_harga', 'label'=>'Surat Penetapan Harga Limit', 'doc'=>$harga],
-                                ] as $item)
-                                <div class="col-md-4">
-                                    <div class="form-group mb-2">
-                                        <label class="small font-weight-bold text-muted d-flex align-items-center justify-content-between">
-                                            {{ $item['label'] }}
-                                            @if($item['doc'])
-                                            <span style="color:#1a6b3c;font-size:0.68rem;">
-                                                <i class="fas fa-check-circle"></i> Ada
-                                            </span>
-                                            @else
-                                            <span class="text-danger" style="font-size:0.68rem;">Belum</span>
-                                            @endif
-                                        </label>
-                                        <input type="file" name="{{ $item['key'] }}" accept=".pdf"
-                                            class="form-control form-control-sm"
-                                            style="border-radius:6px;"
-                                            {{ $item['doc'] ? 'disabled' : '' }}>
-                                        @if($item['doc'])
-                                        <small>
-                                            <a href="{{ asset('storage/'.$item['doc']->file_path) }}"
-                                                target="_blank" style="color:#1a6b3c;font-size:0.72rem;">
-                                                <i class="fas fa-eye mr-1"></i>Lihat file
-                                            </a>
-                                        </small>
-                                        @else
-                                        <small class="text-muted" style="font-size:0.7rem;">PDF, maks. 2MB</small>
-                                        @endif
-                                    </div>
-                                </div>
-                                @endforeach
-                            </div>
-                            @if(!$sk || !$izin || !$harga)
-                            <button type="submit" class="btn btn-sm font-weight-bold"
-                                style="background:#1a6b3c;color:white;border-radius:6px;padding:5px 16px;">
-                                <i class="fas fa-upload mr-1"></i> Upload
-                            </button>
-                            @endif
-                        </div>
-                    </form>
-                    @endif
-
+                    
                     {{-- Grid 3 dokumen --}}
                     <div class="row">
                         @foreach([
@@ -322,25 +234,7 @@
                                         style="background:#e8f5ee;color:#1a6b3c;border-radius:6px;font-size:0.75rem;"
                                         onclick="previewDokumen('{{ asset('storage/'.$item['doc']->file_path) }}','{{ $item['label'] }}')">
                                         <i class="fas fa-eye"></i>
-                                    </button>
-                                    @if($canEditSatker)
-                                    <form id="form-dok-{{ $item['doc']->id }}"
-                                        action="{{ route('satker.dokumen.destroy', $item['doc']->id) }}"
-                                        method="POST" style="flex:1;">
-                                        @csrf @method('DELETE')
-                                        <button type="button" class="btn btn-sm w-100"
-                                            style="background:#fde8e8;color:#e74a3b;border-radius:6px;font-size:0.75rem;"
-                                            onclick="swalSubmitForm('form-dok-{{ $item['doc']->id }}', {
-                                                title: 'Hapus Dokumen?',
-                                                text: '{{ $item['label'] }} akan dihapus permanen.',
-                                                icon: 'warning',
-                                                confirmText: 'Ya, Hapus',
-                                                confirmColor: '#e74a3b'
-                                            })">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                    @endif
+                                    </button>                                    
                                 </div>
                                 @else
                                 <div class="text-muted small mt-1" style="font-size:0.72rem;">Belum diupload</div>
@@ -410,71 +304,7 @@
                 <i class="fas fa-compress-alt mr-1"></i>Tutup Semua
             </button>
         </div>
-    </div>
-
-    {{-- Form tambah perkara --}}
-    @if($canEditSatker)
-    <div class="detail-card mb-3">
-        <div class="detail-card-header" style="background:linear-gradient(90deg,#c0392b,#a93226);">
-            <i class="fas fa-plus-circle mr-2"></i>Tambah Putusan Perkara Baru
-        </div>
-        <div class="detail-card-body">
-            <form method="POST" action="{{ route('satker.pengajuan.perkara.store', $pengajuan) }}"
-                enctype="multipart/form-data">
-                @csrf
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-muted">Nomor Perkara</label>
-                            <input type="text" name="nomor_perkara"
-                                class="form-control form-control-sm" placeholder="Nomor Perkara"
-                                required style="border-radius:6px;">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-muted">Nama Tersangka</label>
-                            <input type="text" name="nama_tersangka"
-                                class="form-control form-control-sm" placeholder="Nama Tersangka"
-                                required style="border-radius:6px;">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-muted">Tanggal Putusan</label>
-                            <input type="date" name="tanggal_putusan"
-                                class="form-control form-control-sm" required style="border-radius:6px;">
-                        </div>
-                    </div>
-                </div>
-
-                <label class="small font-weight-bold text-muted">Dokumen Perkara</label>
-                <div id="dokumen-wrapper">
-                    <div class="input-group mb-2">
-                        <input type="file" name="dokumen[]" class="form-control form-control-sm" accept=".pdf" required>
-                        <input type="text" name="nama_dokumen[]" class="form-control form-control-sm" placeholder="Nama Dokumen" required>
-                        <div class="input-group-append">
-                            <button type="button" class="btn btn-sm"
-                                style="background:#c0392b;color:white;border-radius:0 6px 6px 0;"
-                                onclick="tambahDokumen()">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div id="error-dokumen" style="display:none;" class="mb-2">
-                    <small class="text-danger"><i class="fas fa-exclamation-circle mr-1"></i>
-                        <span id="error-dokumen-text"></span></small>
-                </div>
-                <small class="text-muted d-block mb-3">PDF, maks. 5 dokumen & 2MB/file</small>
-                <button type="submit" class="btn btn-sm font-weight-bold"
-                    style="background:#c0392b;color:white;border-radius:6px;">
-                    <i class="fas fa-save mr-1"></i> Tambah Putusan Perkara
-                </button>
-            </form>
-        </div>
-    </div>
-    @endif
+    </div>    
 
     {{-- Loop accordion per perkara --}}
     @foreach($pengajuan->perkaras as $i => $perkara)
@@ -513,32 +343,7 @@
                 </span>
                 <span class="perkara-badge {{ $barangOk ? 'perkara-badge--ok' : 'perkara-badge--warn' }}">
                     <i class="fas fa-box mr-1"></i>{{ $totalBarangPerkara }} barang
-                </span>
-
-                @if($canEditSatker)
-                {{-- Edit --}}
-                <button type="button" class="btn btn-sm perkara-btn-edit"
-                    onclick="event.stopPropagation(); $('#editPerkara{{ $perkara->id }}').modal('show');">
-                    <i class="fas fa-edit"></i>
-                </button>
-                {{-- Hapus --}}
-                <form id="form-perkara-{{ $perkara->id }}"
-                    action="{{ route('satker.pengajuan.perkara.destroy', $perkara->id) }}"
-                    method="POST" style="display:inline;" onclick="event.stopPropagation()">
-                    @csrf @method('DELETE')
-                    <button type="button" class="btn btn-sm perkara-btn-hapus"
-                        onclick="event.stopPropagation(); swalSubmitForm('form-perkara-{{ $perkara->id }}', {
-                            title: 'Hapus Putusan Perkara?',
-                            text: 'Semua dokumen dan barang dalam perkara ini akan ikut terhapus.',
-                            icon: 'warning',
-                            confirmText: 'Ya, Hapus',
-                            confirmColor: '#e74a3b'
-                        })">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </form>
-                @endif
-
+                </span>          
                 <i class="fas fa-chevron-down perkara-chevron" id="chevron-{{ $perkara->id }}"></i>
             </div>
         </div>
@@ -551,63 +356,26 @@
                 <div class="section-block">
                     <div class="section-block-title">
                         <i class="fas fa-paperclip mr-1"></i>Dokumen Putusan Perkara
+                        <span class="badge ml-1"
+                            style="background:#e8f5ee;color:#1a6b3c;border-radius:20px;font-size:0.65rem;">
+                            {{ $perkara->dokumenPerkara->count() }} file
+                        </span>
                     </div>
 
                     @forelse($perkara->dokumenPerkara as $doc)
-                    <div class="dok-perkara-row">
-                        <i class="fas fa-file-pdf text-danger mr-2 small"></i>
-                        <span class="small flex-fill">{{ $doc->nama_dokumen }}</span>
-                        <button type="button" class="btn btn-sm mr-1"
-                            style="background:#e8f5ee;color:#1a6b3c;border-radius:5px;font-size:0.73rem;padding:2px 8px;"
+                    <div class="dok-chip">
+                        <i class="fas fa-file-pdf text-danger mr-1" style="font-size:0.8rem;flex-shrink:0;"></i>
+                        <span class="dok-chip-nama">{{ $doc->nama_dokumen }}</span>
+                        <button type="button" class="dok-chip-btn"
                             onclick="previewDokumen('{{ asset('storage/'.$doc->file_path) }}','{{ $doc->nama_dokumen }}')">
-                            <i class="fas fa-eye mr-1"></i>Lihat
+                            <i class="fas fa-eye"></i>
                         </button>
-                        @if($canEditSatker)
-                        <form id="form-dok-p-{{ $doc->id }}"
-                            action="{{ route('satker.pengajuan.perkara.dokumen.destroy', $doc->id) }}"
-                            method="POST" style="display:inline;">
-                            @csrf @method('DELETE')
-                            <button type="button" class="btn btn-sm"
-                                style="background:#fde8e8;color:#e74a3b;border-radius:5px;font-size:0.73rem;padding:2px 8px;"
-                                onclick="swalSubmitForm('form-dok-p-{{ $doc->id }}', {
-                                    title: 'Hapus Dokumen?',
-                                    text: '{{ addslashes($doc->nama_dokumen) }} akan dihapus.',
-                                    icon: 'warning',
-                                    confirmText: 'Ya, Hapus',
-                                    confirmColor: '#e74a3b'
-                                })">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                        @endif
                     </div>
                     @empty
                     <div class="text-danger small">
                         <i class="fas fa-exclamation-circle mr-1"></i>Belum ada dokumen
                     </div>
                     @endforelse
-
-                    {{-- Upload dokumen tambahan --}}
-                    @if($canEditSatker)
-                    <form method="POST"
-                        action="{{ route('satker.pengajuan.perkara.uploadDokumen', $perkara) }}"
-                        enctype="multipart/form-data" class="mt-2">
-                        @csrf
-                        <div class="input-group input-group-sm">
-                            <input type="file" name="dokumen[]" multiple accept=".pdf"
-                                class="form-control form-control-sm" style="border-radius:6px 0 0 6px;">
-                            <input type="text" name="nama_dokumen[]"
-                                class="form-control form-control-sm" placeholder="Nama dokumen">
-                            <div class="input-group-append">
-                                <button class="btn btn-sm"
-                                    style="background:#1a6b3c;color:white;border-radius:0 6px 6px 0;">
-                                    <i class="fas fa-upload"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <small class="text-muted" style="font-size:0.7rem;">PDF, maks. 2MB</small>
-                    </form>
-                    @endif
                 </div>
 
                 {{-- ── BARANG ── --}}
@@ -618,101 +386,7 @@
                             style="background:#e8f5ee;color:#1a6b3c;border-radius:20px;font-size:0.68rem;">
                             {{ $totalBarangPerkara }} barang
                         </span>
-                    </div>
-
-                    {{-- Tambah Barang Toggle --}}
-                    @if($canEditSatker)
-                    <button type="button" id="btn-toggle-barang-{{ $perkara->id }}"
-                        onclick="toggleFormBarang({{ $perkara->id }})"
-                        class="btn btn-sm font-weight-bold mb-3"
-                        style="background:#f6c90e;color:#1a6b3c;border-radius:8px;padding:5px 14px;">
-                        <i class="fas fa-plus mr-1" id="icon-form-barang-{{ $perkara->id }}"></i>
-                        <span id="label-form-barang-{{ $perkara->id }}">Tambah Barang</span>
-                    </button>
-
-                    <div id="wrap-form-barang-{{ $perkara->id }}"
-                        style="overflow:hidden;max-height:0;transition:max-height 0.35s ease;">
-                        <form method="POST" action="{{ route('satker.perkara.barang.store', $perkara) }}"
-                            id="formBarang-{{ $perkara->id }}" class="mb-3">
-                            @csrf
-                            <input type="hidden" name="perkara_id" value="{{ $perkara->id }}">
-                            <div style="border:1px dashed #f6c90e;border-radius:10px;background:#fffdf0;padding:14px;">
-
-                                @if($errors->any() && old('perkara_id') == $perkara->id)
-                                <div class="alert alert-danger py-2 mb-3"
-                                    style="border-left:4px solid #e74a3b;border-radius:8px;font-size:0.82rem;">
-                                    @foreach($errors->all() as $error)
-                                        <span class="d-block">{{ $error }}</span>
-                                    @endforeach
-                                </div>
-                                @endif
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold text-muted">Nama Barang</label>
-                                            <input type="text" name="nama_barang"
-                                                class="form-control form-control-sm"
-                                                value="{{ old('perkara_id') == $perkara->id ? old('nama_barang') : '' }}"
-                                                placeholder="Nama Barang" style="border-radius:6px;">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold text-muted">
-                                                Harga Limit (Rp)
-                                                <span class="font-weight-normal text-muted">— maks. Rp 35.000.000</span>
-                                            </label>
-                                            <input type="number" name="harga_awal"
-                                                class="form-control form-control-sm"
-                                                min="1" max="35000000"
-                                                value="{{ old('perkara_id') == $perkara->id ? old('harga_awal') : '' }}"
-                                                placeholder="0" style="border-radius:6px;"
-                                                oninput="validateHargaLimit(this)">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label class="small font-weight-bold text-muted">Deskripsi</label>
-                                            <input type="text" name="deskripsi"
-                                                class="form-control form-control-sm"
-                                                placeholder="Deskripsi singkat kondisi barang"
-                                                value="{{ old('perkara_id') == $perkara->id ? old('deskripsi') : '' }}"
-                                                style="border-radius:6px;">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <button type="button"
-                                            onclick="toggleCatatanInternal({{ $perkara->id }})"
-                                            style="background:none;border:none;padding:0;color:#1a6b3c;font-size:0.82rem;font-weight:600;cursor:pointer;">
-                                            <i class="fas fa-plus-circle mr-1" id="icon-catatan-{{ $perkara->id }}"></i>
-                                            <span id="label-catatan-{{ $perkara->id }}">Barang Gabungan? Tambah Catatan Internal</span>
-                                        </button>
-                                        <div id="wrap-catatan-{{ $perkara->id }}" style="display:none;margin-top:8px;">
-                                            <textarea name="catatan_internal" rows="2"
-                                                class="form-control form-control-sm"
-                                                placeholder="Contoh: Hasil penggabungan dari perkara No. 123/2025"
-                                                style="border-radius:6px;">{{ old('perkara_id') == $perkara->id ? old('catatan_internal') : '' }}</textarea>
-                                            <small class="text-muted" style="font-size:0.72rem;">
-                                                <i class="fas fa-info-circle mr-1"></i>Tidak ditampilkan ke pembeli.
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-3 d-flex" style="gap:8px;">
-                                    <button type="submit" class="btn btn-sm font-weight-bold"
-                                        style="background:#f6c90e;color:#1a6b3c;border-radius:6px;">
-                                        <i class="fas fa-save mr-1"></i> Simpan Barang
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-secondary"
-                                        onclick="toggleFormBarang({{ $perkara->id }})"
-                                        style="border-radius:6px;">Batal</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    @endif
+                    </div>                    
 
                     {{-- Tabel Barang --}}
                     @if($totalBarangPerkara > 0)
@@ -725,9 +399,6 @@
                                     <th class="border-0" style="color:#1a6b3c;">Deskripsi</th>
                                     <th class="border-0" style="color:#1a6b3c;">Catatan Internal</th>
                                     <th class="border-0" style="color:#1a6b3c;">Foto</th>
-                                    @if($canEditSatker)
-                                    <th class="border-0" style="color:#1a6b3c;width:80px;">Aksi</th>
-                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -756,64 +427,12 @@
                                                 <img src="{{ asset('storage/'.$foto->file_path) }}"
                                                     style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:2px solid #e0eeea;cursor:pointer;"
                                                     onclick="previewDokumen('{{ asset('storage/'.$foto->file_path) }}','Foto Barang')">
-                                                @if($canEditSatker)
-                                                <form action="{{ route('satker.barang.foto.destroy', $foto->id) }}"
-                                                    method="POST" style="position:absolute;top:1px;right:1px;">
-                                                    @csrf @method('DELETE')
-                                                    <button type="submit" class="photo-delete"
-                                                        onclick="return confirm('Hapus foto?')">×</button>
-                                                </form>
-                                                @endif
                                             </div>
                                             @empty
                                             <small class="text-muted">Belum ada foto</small>
                                             @endforelse
-                                        </div>
-                                        @if($canEditSatker)
-                                        <form method="POST"
-                                            action="{{ route('satker.barang.uploadFoto', $barang) }}"
-                                            enctype="multipart/form-data" class="mt-1">
-                                            @csrf
-                                            <div class="input-group input-group-sm">
-                                                <input type="file" name="foto[]" multiple accept="image/*"
-                                                    class="form-control form-control-sm"
-                                                    style="border-radius:6px 0 0 6px;font-size:0.75rem;">
-                                                <div class="input-group-append">
-                                                    <button class="btn btn-sm"
-                                                        style="background:#1a6b3c;color:white;border-radius:0 6px 6px 0;">
-                                                        <i class="fas fa-upload"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </form>
-                                        @endif
-                                    </td>
-                                    @if($canEditSatker)
-                                    <td class="align-middle text-center">
-                                        <button type="button" class="btn btn-sm mb-1"
-                                            style="background:#fff3cd;color:#856404;border-radius:6px;width:32px;"
-                                            data-toggle="modal"
-                                            data-target="#modalEditBarang-{{ $barang->id }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <form id="form-barang-{{ $barang->id }}"
-                                            action="{{ route('satker.barang.destroy', $barang->id) }}"
-                                            method="POST" style="display:inline;">
-                                            @csrf @method('DELETE')
-                                            <button type="button" class="btn btn-sm"
-                                                style="background:#fde8e8;color:#e74a3b;border-radius:6px;width:32px;"
-                                                onclick="swalSubmitForm('form-barang-{{ $barang->id }}', {
-                                                    title: 'Hapus Barang?',
-                                                    text: '{{ addslashes($barang->nama_barang) }} akan dihapus permanen.',
-                                                    icon: 'warning',
-                                                    confirmText: 'Ya, Hapus',
-                                                    confirmColor: '#e74a3b'
-                                                })">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                    @endif
+                                        </div>                                        
+                                    </td>                                    
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -927,98 +546,6 @@
         </div>
     </div>
 </div>
-
-{{-- ═══ MODAL EDIT PERKARA ═══ --}}
-@foreach($pengajuan->perkaras as $p)
-<div class="modal fade" id="editPerkara{{ $p->id }}" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="border-radius:12px;overflow:hidden;border:none;">
-            <form method="POST" action="{{ route('satker.pengajuan.perkara.update', $p->id) }}"
-                enctype="multipart/form-data">
-                @csrf @method('PUT')
-                <div class="modal-header" style="background:linear-gradient(90deg,#1a6b3c,#145c32);">
-                    <h5 class="modal-title text-white font-weight-bold">
-                        <i class="fas fa-edit mr-2" style="color:#f6c90e;"></i>Edit Putusan Perkara
-                    </h5>
-                    <button class="close text-white" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body" style="background:#f8fff9;">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold text-muted">Nomor Perkara</label>
-                                <input type="text" name="nomor_perkara" value="{{ $p->nomor_perkara }}"
-                                    class="form-control" style="border-radius:8px;" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold text-muted">Nama Tersangka</label>
-                                <input type="text" name="nama_tersangka" value="{{ $p->nama_tersangka }}"
-                                    class="form-control" style="border-radius:8px;" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="small font-weight-bold text-muted">Tanggal Putusan</label>
-                                <input type="date" name="tanggal_putusan"
-                                    value="{{ $p->tanggal_putusan ? \Carbon\Carbon::parse($p->tanggal_putusan)->format('Y-m-d') : '' }}"
-                                    class="form-control" style="border-radius:8px;" required>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <label class="small font-weight-bold text-muted">Dokumen Terlampir</label>
-                    <ul class="list-group mb-3">
-                        @forelse($p->dokumenPerkara ?? [] as $doc)
-                        <li class="list-group-item d-flex justify-content-between align-items-center"
-                            style="border-radius:8px;margin-bottom:4px;border:1px solid #e0eeea;background:#f8fff9;">
-                            <span><i class="fas fa-file-pdf text-danger mr-2"></i>{{ $doc->nama_dokumen }}</span>
-                            <button type="button" class="btn btn-sm"
-                                style="background:#e8f5ee;color:#1a6b3c;border-radius:6px;font-size:0.78rem;"
-                                onclick="previewDokumen('{{ asset('storage/'.$doc->file_path) }}','{{ $doc->nama_dokumen }}')">
-                                <i class="fas fa-eye mr-1"></i> Lihat
-                            </button>
-                        </li>
-                        @empty
-                        <li class="list-group-item text-center text-muted" style="border-radius:8px;">
-                            Tidak ada dokumen
-                        </li>
-                        @endforelse
-                    </ul>
-                    <label class="small font-weight-bold text-muted">Tambah Dokumen Baru</label>
-                    <div id="dokumen-wrapper-edit-{{ $p->id }}">
-                        <div class="input-group mb-2">
-                            <input type="file" name="dokumen[]" class="form-control form-control-sm" accept=".pdf">
-                            <input type="text" name="nama_dokumen[]" class="form-control form-control-sm" placeholder="Nama Dokumen">
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-sm btn-success"
-                                    onclick="tambahDokumenEdit({{ $p->id }})">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="error-dokumen-edit-{{ $p->id }}" style="display:none;" class="mt-1 mb-2">
-                        <small class="text-danger">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span id="error-dokumen-edit-text-{{ $p->id }}"></span>
-                        </small>
-                    </div>
-                    <small class="text-muted">PDF, maks. 5 dokumen & 2MB/file</small>
-                </div>
-                <div class="modal-footer" style="background:#f8fff9;">
-                    <button class="btn btn-sm btn-secondary" data-dismiss="modal" style="border-radius:6px;">Batal</button>
-                    <button type="submit" class="btn btn-sm font-weight-bold"
-                        style="background:#1a6b3c;color:white;border-radius:6px;">
-                        <i class="fas fa-save mr-1"></i>Update Perkara
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endforeach
 
 {{-- ═══ MODAL PREVIEW ═══ --}}
 <div class="modal fade" id="previewModal" tabindex="-1">
@@ -1205,18 +732,45 @@
 .perkara-badge--err  { background: #fde8e8; color: #c0392b; }
 .perkara-badge--warn { background: #fff3cd; color: #856404; }
 
-.perkara-btn-edit, .perkara-btn-hapus {
-    width: 28px; height: 28px; padding: 0;
-    border-radius: 6px; font-size: 0.72rem;
-    display: flex; align-items: center; justify-content: center;
-}
-.perkara-btn-edit  { background: #fff3cd; color: #856404; border: none; }
-.perkara-btn-hapus { background: #fde8e8; color: #e74a3b; border: none; }
 .perkara-chevron {
     font-size: 0.78rem; color: #6c757d;
     transition: transform 0.3s ease;
     flex-shrink: 0;
 }
+
+/* Dokumen chips horizontal */
+.section-block > .dok-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fff9;
+    border: 1px solid #b2d8c0;
+    border-radius: 20px;
+    padding: 4px 10px 4px 8px;
+    margin: 0 4px 6px 0;
+    font-size: 0.75rem;
+    max-width: 220px;
+}
+.dok-chip-nama {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+    color: #2d3748;
+}
+.dok-chip-btn {
+    background: #e8f5ee;
+    color: #1a6b3c;
+    border: none;
+    border-radius: 50%;
+    width: 25px; height: 25px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.dok-chip-btn:hover { background: #b2d8c0; }
 
 /* Accordion body smooth */
 .perkara-acc-body {
@@ -1239,21 +793,6 @@
     font-size: 0.8rem; font-weight: 700; color: #1a6b3c;
     border-bottom: 1px solid #e0eeea;
     padding-bottom: 6px; margin-bottom: 10px;
-}
-.dok-perkara-row {
-    display: flex; align-items: center;
-    padding: 6px 10px; border-radius: 8px;
-    background: #f8fff9; border: 1px solid #e0eeea;
-    margin-bottom: 6px; gap: 6px;
-}
-
-/* Photo delete btn */
-.photo-delete {
-    width: 16px; height: 16px; border-radius: 50%;
-    background: rgba(0,0,0,0.6); color: white;
-    border: none; cursor: pointer; font-size: 10px;
-    display: flex; align-items: center; justify-content: center;
-    line-height: 1;
 }
 </style>
 

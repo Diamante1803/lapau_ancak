@@ -457,6 +457,9 @@
     #carouselAktif, #carouselMendatang {
         cursor: grab;
         user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
     }
 
     #carouselAktif.grabbing, #carouselMendatang.grabbing {
@@ -531,7 +534,8 @@ let touchState = {
     startX: 0,
     startY: 0,
     isDragging: false,
-    activeCarousel: null
+    activeCarousel: null,
+    isMouse: false
 };
 
 function updateCarouselState() {
@@ -663,6 +667,81 @@ function handleTouchEnd(e) {
             slideCarousel(touchState.activeCarousel, 1);
         } else {
             // Swipe right → prev
+            slideCarousel(touchState.activeCarousel, -1);
+        }
+    }
+
+    touchState.activeCarousel = null;
+}
+
+// ===== MOUSE DRAG =====
+function initMouseDrag() {
+    const carouselAktif = document.getElementById('carouselAktif');
+    const carouselMendatang = document.getElementById('carouselMendatang');
+
+    if (carouselAktif) {
+        carouselAktif.addEventListener('mousedown', handleMouseDown, false);
+        carouselAktif.addEventListener('mousemove', handleMouseMove, false);
+        carouselAktif.addEventListener('mouseup', handleMouseUp, false);
+        carouselAktif.addEventListener('mouseleave', handleMouseUp, false);
+    }
+
+    if (carouselMendatang) {
+        carouselMendatang.addEventListener('mousedown', handleMouseDown, false);
+        carouselMendatang.addEventListener('mousemove', handleMouseMove, false);
+        carouselMendatang.addEventListener('mouseup', handleMouseUp, false);
+        carouselMendatang.addEventListener('mouseleave', handleMouseUp, false);
+    }
+}
+
+function handleMouseDown(e) {
+    // Ignore jika bukan left click
+    if (e.button !== 0) return;
+
+    // Ignore jika click pada button
+    if (e.target.closest('button')) return;
+
+    const carousel = e.currentTarget;
+    const carouselType = carousel.id === 'carouselAktif' ? 'aktif' : 'mendatang';
+
+    touchState.startX = e.clientX;
+    touchState.startY = e.clientY;
+    touchState.isDragging = true;
+    touchState.activeCarousel = carouselType;
+    touchState.isMouse = true;
+
+    carousel.classList.add('grabbing');
+    e.preventDefault();
+}
+
+function handleMouseMove(e) {
+    if (!touchState.isDragging || !touchState.isMouse) return;
+    // Optional: bisa tambahkan visual feedback di sini
+}
+
+function handleMouseUp(e) {
+    if (!touchState.isDragging || !touchState.isMouse) return;
+
+    const carousel = document.getElementById(
+        touchState.activeCarousel === 'aktif' ? 'carouselAktif' : 'carouselMendatang'
+    );
+    carousel?.classList.remove('grabbing');
+
+    const endX = e.clientX;
+    const endY = e.clientY;
+    const diffX = touchState.startX - endX;
+    const diffY = Math.abs(touchState.startY - endY);
+
+    touchState.isDragging = false;
+    touchState.isMouse = false;
+
+    // Ensure drag is horizontal (not vertical movement)
+    if (Math.abs(diffX) > SWIPE_THRESHOLD && diffY < 50) {
+        if (diffX > 0) {
+            // Drag left → next
+            slideCarousel(touchState.activeCarousel, 1);
+        } else {
+            // Drag right → prev
             slideCarousel(touchState.activeCarousel, -1);
         }
     }
@@ -1019,6 +1098,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         updateCarouselState();
         initTouchSwipe();
+        initMouseDrag();
     }, 100);
     applyFilters();
 });

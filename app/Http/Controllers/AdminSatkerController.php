@@ -18,19 +18,7 @@ use App\Models\DokumenPerkara;
 class AdminSatkerController extends Controller
 {
     use AuthorizesRequests;
-    // =========================
-    // DASHBOARD + LIST
-    // =========================
-    public function dashboard()
-    {
-        // $pengajuans = PengajuanLelang::where('satker_id', auth()->user()->satker_id)
-        //     ->latest()
-        //     ->take(5) // ambil 5 terbaru saja
-        //     ->get();
-
-        // return view('admin.dashboard', compact('pengajuans'));
-    }
-
+    
     public function index(Request $request)
     {
         $query = PengajuanLelang::with([
@@ -74,11 +62,6 @@ class AdminSatkerController extends Controller
     // ============================================================
     // WIZARD — CREATE (redirect ke step 1 pengajuan baru)
     // ============================================================
-    
-    public function create()
-    {
-        return view('admin_satker.pengajuan.wizard.step1-create');
-    }
     
     public function store(Request $request)
     {

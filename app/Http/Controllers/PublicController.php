@@ -28,12 +28,17 @@ class PublicController extends Controller
             ->where(function ($q) use ($graceLimit) {
                 $q->where('status', 'active')
                 ->orWhere(function ($q2) use ($graceLimit) {
-                    // closed tapi belum lebih dari 2 hari
                     $q2->where('status', 'closed')
                         ->where('tanggal_selesai', '>=', $graceLimit);
                 });
             })
-            ->orderByRaw("FIELD(status, 'active', 'closed')")
+            ->orderByRaw("
+                CASE 
+                    WHEN status = 'active' THEN 1
+                    WHEN status = 'closed' THEN 2
+                    ELSE 3
+                END
+            ")
             ->orderBy('tanggal_selesai', 'asc')
             ->get();
 

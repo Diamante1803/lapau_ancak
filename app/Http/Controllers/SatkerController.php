@@ -23,7 +23,7 @@ class SatkerController extends Controller
     {
         $request->validate([
             'nama_satker' => 'required',
-            'alamat' => 'required',
+            'alamat'      => 'nullable|string|max:255', 
         ]);
 
         Satker::create([
@@ -33,16 +33,6 @@ class SatkerController extends Controller
 
         return redirect()->route('admin.satker.index')
             ->with('success', 'Satker berhasil ditambahkan');
-    }
-
-    public function show(Satker $satker)
-    {
-        return view('admin.satker.show', compact('satker'));
-    }
-
-    public function edit(Satker $satker)
-    {
-        return view('admin.satker.edit', compact('satker'));
     }
 
     public function update(Request $request, Satker $satker)

@@ -46,8 +46,12 @@ Route::middleware(['auth', 'role:admin_pusat'])
         Route::post('/lelang/{lelang}/tutup', [LelangController::class, 'tutup'])->name('lelang.tutup');
         Route::get('/lelang/{lelang}/detail', [LelangController::class, 'detail'])->name('lelang.detail');
         Route::get('lelang/selesai', [LelangController::class, 'selesai'])->name('lelang.selesai');
+        Route::post('/lelang/{lelang}/batal-aktif', [LelangController::class, 'batalAktif'])->name('lelang.batalAktif');
 
-        Route::resource('satker', SatkerController::class);
+        Route::post('satker', [SatkerController::class, 'store'])->name('satker.store');
+        Route::put('satker/{satker}', [SatkerController::class, 'update'])->name('satker.update');
+        Route::delete('satker/{satker}', [SatkerController::class, 'destroy'])->name('satker.destroy');
+        Route::get('satker', [SatkerController::class, 'index'])->name('satker.index');
 
         Route::get('laporan', [LaporanController::class, 'pusat'])
         ->name('laporan.index');    

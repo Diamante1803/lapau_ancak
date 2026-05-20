@@ -450,20 +450,32 @@
                 </form>
                 @endif
 
-                <form action="{{ route('admin.lelang.tutup', $lelang->id) }}" method="POST" class="mr-2">
+                <form action="{{ route('admin.lelang.tutup', $lelang->id) }}" method="POST" class="mr-2" id="form-tutup-lelang">
                     @csrf @method('PATCH')
-                    <button type="submit" class="btn btn-sm font-weight-bold btn-secondary"
+                    <button type="button" class="btn btn-sm font-weight-bold btn-secondary"
                         style="border-radius:8px; padding: 6px 16px;"
-                        onclick="return confirm('Tutup lelang ini?')">
+                        onclick="swalSubmitForm('form-tutup-lelang', {
+                            title: 'Tutup Lelang?',
+                            text: 'Lelang akan ditutup dan pemenang akan ditentukan berdasarkan penawaran tertinggi.',
+                            icon: 'warning',
+                            confirmText: 'Ya, Tutup Lelang',
+                            confirmColor: '#6c757d'
+                        })">
                         <i class="fas fa-stop mr-1"></i> Tutup Lelang
                     </button>
                 </form>
 
-                <form action="{{ route('admin.lelang.batal', $lelang->id) }}" method="POST">
-                    @csrf @method('PATCH')
-                    <button type="submit" class="btn btn-sm font-weight-bold btn-outline-danger"
-                        style="border-radius:8px; padding: 6px 16px;"
-                        onclick="return confirm('Batalkan lelang ini? Tindakan ini tidak dapat dibatalkan.')">
+                <form action="{{ route('admin.lelang.batalAktif', $lelang->id) }}" method="POST" id="form-batal-lelang">
+                    @csrf
+                    <button type="button" class="btn btn-sm font-weight-bold btn-outline-danger"
+                        style="border-radius:8px;padding:6px 16px;"
+                        onclick="swalSubmitForm('form-batal-lelang', {
+                            title: 'Batalkan Lelang?',
+                            text: 'Lelang akan dibatalkan dan barang kembali ke status tersedia.',
+                            icon: 'error',
+                            confirmText: 'Ya, Batalkan',
+                            confirmColor: '#dc3545'
+                        })">
                         <i class="fas fa-ban mr-1"></i> Batalkan Lelang
                     </button>
                 </form>

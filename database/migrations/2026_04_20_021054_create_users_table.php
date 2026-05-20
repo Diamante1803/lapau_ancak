@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->foreignId('satker_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('nama');
+            $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
             $table->enum('role', ['admin_pusat', 'admin_satker']);

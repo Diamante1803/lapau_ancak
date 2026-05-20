@@ -12,17 +12,21 @@ return new class extends Migration
      */
     public function up()
     {
+        if (DB::getDriverName() !== 'sqlite') {
         DB::statement("ALTER TABLE dokumen_pengajuans 
             MODIFY COLUMN jenis 
             ENUM('sk_panitia','izin_penjualan','surat_penetapan_harga') 
             NOT NULL");
+        }
     }
 
     public function down()
     {
+        if (DB::getDriverName() !== 'sqlite') {
         DB::statement("ALTER TABLE dokumen_pengajuans 
             MODIFY COLUMN jenis 
             ENUM('sk_panitia','izin_penjualan') 
             NOT NULL");
+        }
     }
 };

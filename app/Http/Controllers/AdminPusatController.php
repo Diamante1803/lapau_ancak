@@ -111,12 +111,6 @@ class AdminPusatController extends Controller
         return view('admin.pengajuan.show', compact('pengajuan'));
     }
 
-    public function create()
-    {
-        $satkers = \App\Models\Satker::all();
-        return view('tambah', compact('satkers'));
-    }
-
     public function store(Request $request)
     {
         
@@ -206,13 +200,6 @@ class AdminPusatController extends Controller
 
         return redirect()->route('admin.pengajuan.index')
             ->with('success', 'Pengajuan dan semua relasi berhasil dihapus');
-    }
-
-    public function satkerIndex()
-    {
-        $satkers = Satker::latest()->get();
-
-        return view('admin.satker.index', compact('satkers'));
     }
 
     public function satkerStore(Request $request)

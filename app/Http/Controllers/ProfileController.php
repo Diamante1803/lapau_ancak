@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -21,19 +19,6 @@ class ProfileController extends Controller
         return view('profile.edit', [
             'user' => $request->user(),
         ]);
-    }
-
-    // app/Http/Requests/ProfileUpdateRequest.php
-    public function rules(): array
-    {
-        return [
-            'name'     => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'max:50', 'alpha_dash', 
-                        Rule::unique(User::class)->ignore($this->user()->id)],
-            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 
-                        Rule::unique(User::class)->ignore($this->user()->id)],
-            'kontak'   => ['nullable', 'string', 'max:20'],
-        ];
     }
 
     /**

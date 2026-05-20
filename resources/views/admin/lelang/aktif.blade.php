@@ -170,7 +170,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table id="tabelLelangAktif" class="table table-hover mb-0">
                     <thead style="background: #f8fff9;">
                         <tr>
                             <th class="border-0 pl-4" style="color:#1a6b3c;font-size:0.8rem;" width="4%">No</th>
@@ -432,6 +432,13 @@ setInterval(updateCountdowns, 1000);
 setTimeout(function() {
     window.location.reload();
 }, 5 * 60 * 1000);
+
+document.addEventListener('DOMContentLoaded', function () {
+    LapauTable.init('tabelLelangAktif', {
+        pageSize:  10,
+        sortDir:   'desc',
+    });
+});
 </script>
 
 @endsection

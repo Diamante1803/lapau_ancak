@@ -121,7 +121,7 @@
                                 <div class="d-flex justify-content-center" style="gap: 4px;">
 
                                     {{-- EDIT --}}
-                                    <button class="btn btn-sm"
+                                    <button type="button" class="btn btn-sm"
                                         style="background: #fff3cd; color: #856404; border-radius: 6px; width: 32px;"
                                         data-toggle="modal"
                                         data-target="#modalEditUser-{{ $user->id }}"
@@ -130,7 +130,7 @@
                                     </button>
 
                                     {{-- RESET PASSWORD --}}
-                                    <button class="btn btn-sm"
+                                    <button type="button" class="btn btn-sm"
                                         style="background: #cce5ff; color: #004085; border-radius: 6px; width: 32px;"
                                         data-toggle="modal"
                                         data-target="#modalResetPass-{{ $user->id }}"
@@ -139,15 +139,18 @@
                                     </button>
 
                                     {{-- DELETE --}}
-                                    <form action="{{ route('admin.users.destroy', $user->id) }}"
-                                        method="POST" style="display:inline;">
+                                    <button type="button" class="btn btn-sm"
+                                        style="background: #fde8e8; color: #e74a3b; border-radius: 6px; width: 32px;"
+                                        title="Hapus"
+                                        onclick="konfirmasiHapusUser('{{ $user->id }}', '{{ $user->name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+
+                                    {{-- Form delete — hidden, di-trigger via JS --}}
+                                    <form id="formHapusUser-{{ $user->id }}"
+                                        action="{{ route('admin.users.destroy', $user->id) }}"
+                                        method="POST" style="display:none;">
                                         @csrf @method('DELETE')
-                                        <button class="btn btn-sm"
-                                            style="background: #fde8e8; color: #e74a3b; border-radius: 6px; width: 32px;"
-                                            onclick="return confirm('Hapus user {{ $user->name }}?')"
-                                            title="Hapus">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
                                     </form>
 
                                 </div>
@@ -168,7 +171,7 @@
                                             <span>&times;</span>
                                         </button>
                                     </div>
-                                    <form method="POST" action="{{ route('admin.users.update', $user->id) }}">
+                                    <form method="POST" action="{{ route('admin.users.update', $user->id) }}" id="formEditUser-{{ $user->id }}">
                                         @csrf @method('PUT')
                                         <div class="modal-body" style="background: #f8fff9;">
                                             <div class="form-group">
@@ -240,7 +243,7 @@
                                             <span>&times;</span>
                                         </button>
                                     </div>
-                                    <form method="POST" action="{{ route('admin.users.reset-password', $user->id) }}">
+                                    <form method="POST" action="{{ route('admin.users.reset-password', $user->id) }}" id="formResetPass-{{ $user->id }}">
                                         @csrf
                                         <div class="modal-body" style="background: #f0f4ff;">
 
@@ -310,7 +313,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('admin.users.store') }}">
+            <form method="POST" action="{{ route('admin.users.store') }}" id="formTambahUser">
                 @csrf
                 <div class="modal-body" style="background: #f8fff9;">
 
@@ -423,12 +426,25 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
     LapauTable.init('tabelUsers', {
         pageSize: 10,
         sortDir: 'desc'
     });
-
 });
+
+// Konfirmasi Delete User
+function konfirmasiHapusUser(userId, userName) {
+    swalConfirm({
+        title: 'Hapus User?',
+        text: `Apakah Anda yakin ingin menghapus user "${userName}"? Tindakan ini tidak dapat dibatalkan.`,
+        icon: 'warning',
+        confirmText: 'Ya, Hapus',
+        confirmColor: '#e74a3b'
+    }).then(result => {
+        if (result.isConfirmed) {
+            document.getElementById('formHapusUser-' + userId).submit();
+        }
+    });
+}
 </script>
 @endpush

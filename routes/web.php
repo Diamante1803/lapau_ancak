@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Route;
 require __DIR__.'/auth.php';
 require __DIR__.'/admin/satker.php';
 require __DIR__.'/admin/pusat.php';
-// require __DIR__.'/lelang.php';
 require __DIR__.'/pembeli.php';
 
 Route::get('/', function () {
@@ -27,12 +26,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::get('auth/tambah', [AdminPusatController::class, 'create']);
-Route::post('auth/tambah', [AdminPusatController::class, 'store'])->name('admin.createAdminSatker');
-
 // routes/web.php — public, tidak perlu auth
 Route::get('/', [PublicController::class, 'index'])->name('public.index');
-Route::get('/lelang', [PublicController::class, 'lelang'])->name('public.lelang');
 Route::get('/lelang/{lelang}', [PublicController::class, 'detail'])->name('public.detail');
 Route::get('/satker/{satker}', [PublicController::class, 'satker'])->name('public.satker');
 
