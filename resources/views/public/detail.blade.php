@@ -8,6 +8,14 @@
     $fotos   = $barang->fotoBarang;
     $hargaTertinggi = $lelang->harga_tertinggi ?? $lelang->harga_awal;
     $minPenawaran   = $hargaTertinggi + 10000;
+    $isActive = $lelang->status === 'active';
+    $statusLabels = [
+        'scheduled' => ['label' => 'SEGERA', 'class' => 'bg-yellow-400 text-yellow-900', 'icon' => 'fa-calendar-alt'],
+        'active' => ['label' => 'LIVE', 'class' => 'bg-green-500 text-white', 'icon' => 'fa-circle'],
+        'closed' => ['label' => 'SELESAI', 'class' => 'bg-gray-400 text-white', 'icon' => 'fa-clock'],
+        'cancelled' => ['label' => 'DIBATALKAN', 'class' => 'bg-red-500 text-white', 'icon' => 'fa-ban'],
+    ];
+    $statusInfo = $statusLabels[$lelang->status] ?? ['label' => strtoupper($lelang->status), 'class' => 'bg-gray-400 text-white', 'icon' => 'fa-info-circle'];
 @endphp
 
 <div class="max-w-6xl mx-auto px-4 py-8">
@@ -56,11 +64,15 @@
                     </div>
                     @endif
 
-                    {{-- Badge Live --}}
+                    {{-- Badge status --}}
                     <div class="absolute top-3 left-3 z-10" id="badge-live">
-                        <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
-                            LIVE
+                        <span class="{{ $statusInfo['class'] }} text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                            @if($isActive)
+                                <span class="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
+                            @else
+                                <i class="fas {{ $statusInfo['icon'] }} text-[10px]"></i>
+                            @endif
+                            {{ $statusInfo['label'] }}
                         </span>
                     </div>
 
@@ -133,7 +145,7 @@
                 </div>
 
                 {{-- Minimal penawaran --}}
-                <div id="info-min-penawaran" class="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-sm flex justify-between">
+                <div id="info-min-penawaran" class="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 text-sm {{ $isActive ? 'flex' : 'hidden' }} justify-between">
                     <span class="text-yellow-700">Minimal penawaran berikutnya</span>
                     <span class="font-bold text-yellow-800" id="minPenawaranDetail">
                         Rp {{ number_format($minPenawaran, 0, ',', '.') }}
@@ -141,42 +153,71 @@
                 </div>
             </div>
 
-            {{-- Countdown --}}
-            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 text-center">
-                <div class="text-xs text-blue-500 mb-2 font-medium">⏱ Waktu Lelang Tersisa</div>
-                <div class="font-mono font-bold text-blue-800 countdown flex items-end justify-center gap-2"
-                    data-end="{{ $lelang->tanggal_selesai->toIso8601String() }}">
-                        @foreach([['id'=>'cd-hari','label'=>'Hari'],['id'=>'cd-jam','label'=>'Jam'],['id'=>'cd-menit','label'=>'Menit'],['id'=>'cd-detik','label'=>'Detik']] as $unit)
-                        <div class="text-center">
-                            <div id="{{ $unit['id'] }}-{{ $lelang->id }}"
-                                class="font-bold"
-                                style="font-size: 1.6rem; color: #1d4ed8; line-height: 1; min-width: 36px; letter-spacing: 1px;">
-                                00
+            {{-- Countdown / status waktu --}}
+            @if($isActive)
+                <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-5 text-center">
+                    <div class="text-xs text-blue-500 mb-2 font-medium">⏱ Waktu Lelang Tersisa</div>
+                    <div class="font-mono font-bold text-blue-800 countdown flex items-end justify-center gap-2"
+                        data-end="{{ $lelang->tanggal_selesai->toIso8601String() }}">
+                            @foreach([['id'=>'cd-hari','label'=>'Hari'],['id'=>'cd-jam','label'=>'Jam'],['id'=>'cd-menit','label'=>'Menit'],['id'=>'cd-detik','label'=>'Detik']] as $unit)
+                            <div class="text-center">
+                                <div id="{{ $unit['id'] }}-{{ $lelang->id }}"
+                                    class="font-bold"
+                                    style="font-size: 1.6rem; color: #1d4ed8; line-height: 1; min-width: 36px; letter-spacing: 1px;">
+                                    00
+                                </div>
+                                <div style="font-size: 0.65rem; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">
+                                    {{ $unit['label'] }}
+                                </div>
                             </div>
-                            <div style="font-size: 0.65rem; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">
-                                {{ $unit['label'] }}
-                            </div>
-                        </div>
-                        @if(!$loop->last)
-                        <div class="font-bold pb-4" style="color: #1d4ed8; font-size: 1.2rem;">:</div>
+                            @if(!$loop->last)
+                            <div class="font-bold pb-4" style="color: #1d4ed8; font-size: 1.2rem;">:</div>
+                            @endif
+                            @endforeach
+                    </div>
+                    <div class="text-xs text-gray-400 mt-2">
+                        Berakhir: {{ $lelang->tanggal_selesai->format('d M Y, H:i') }} WIB
+                    </div>
+                </div>
+            @else
+                <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-5 text-center">
+                    <div class="text-xs text-gray-400 mb-2 font-medium">Status Lelang</div>
+                    <div class="font-bold text-gray-700 flex items-center justify-center gap-2">
+                        <i class="fas {{ $statusInfo['icon'] }}"></i>
+                        {{ $statusInfo['label'] }}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-2">
+                        @if($lelang->status === 'scheduled')
+                            Dibuka: {{ $lelang->tanggal_mulai->format('d M Y, H:i') }} WIB
+                        @elseif($lelang->status === 'closed')
+                            Ditutup: {{ $lelang->tanggal_selesai->format('d M Y, H:i') }} WIB
+                        @else
+                            Lelang ini tidak tersedia untuk penawaran.
                         @endif
-                        @endforeach
+                    </div>
                 </div>
-                <div class="text-xs text-gray-400 mt-2">
-                    Berakhir: {{ $lelang->tanggal_selesai->format('d M Y, H:i') }} WIB
-                </div>
-            </div>
+            @endif
 
             {{-- TOMBOL AJUKAN PENAWARAN --}}
-            <button id="tombol-penawaran" onclick="bukaModal()"
-                class="w-full bg-blue-700 hover:bg-blue-800 active:scale-95 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-lg shadow-lg shadow-blue-200">
-                <i class="fas fa-gavel"></i>
-                Ajukan Penawaran
-            </button>
+            @if($isActive)
+                <button id="tombol-penawaran" onclick="bukaModal()"
+                    class="w-full bg-blue-700 hover:bg-blue-800 active:scale-95 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-lg shadow-lg shadow-blue-200">
+                    <i class="fas fa-gavel"></i>
+                    Ajukan Penawaran
+                </button>
+            @else
+                <button id="tombol-penawaran" disabled
+                    class="w-full bg-gray-200 text-gray-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 text-lg cursor-not-allowed">
+                    <i class="fas {{ $statusInfo['icon'] }}"></i>
+                    {{ $lelang->status === 'scheduled' ? 'Lelang Belum Dibuka' : ($lelang->status === 'cancelled' ? 'Lelang Dibatalkan' : 'Lelang Telah Berakhir') }}
+                </button>
+            @endif
 
-            <p class="text-xs text-gray-400 text-center mt-2">
-                Dengan mengajukan penawaran, Anda menyetujui syarat & ketentuan lelang
-            </p>
+            @if($isActive)
+                <p class="text-xs text-gray-400 text-center mt-2">
+                    Dengan mengajukan penawaran, Anda menyetujui syarat & ketentuan lelang
+                </p>
+            @endif
 
         </div>
     </div>
@@ -358,6 +399,16 @@
                     <p id="msg-kelipatan" class="text-xs text-red-500 mt-1" style="display:none;">
                         <i class="fas fa-exclamation-circle mr-1"></i>Nominal harus kelipatan Rp 1.000
                     </p>
+
+                        {{-- Quick Bid Buttons & Personal Status --}}
+                        <div class="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div id="status-pemenang-personal" class="mb-3 text-center hidden"></div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="tambahBid(10000)" class="flex-1 bg-white border border-gray-200 hover:border-blue-400 hover:text-blue-600 py-2 rounded-lg text-xs font-bold transition shadow-sm">+10rb</button>
+                                <button type="button" onclick="tambahBid(50000)" class="flex-1 bg-white border border-gray-200 hover:border-blue-400 hover:text-blue-600 py-2 rounded-lg text-xs font-bold transition shadow-sm">+50rb</button>
+                                <button type="button" onclick="tambahBid(100000)" class="flex-1 bg-white border border-gray-200 hover:border-blue-400 hover:text-blue-600 py-2 rounded-lg text-xs font-bold transition shadow-sm">+100rb</button>
+                            </div>
+                        </div>
                 </div>
 
                 <div id="errorStep2" class="text-red-500 text-xs mt-2 hidden"></div>
@@ -380,12 +431,30 @@
         class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300">✕</button>
 </div>
 
-<script>
-// 1. Variables global
-const minPenawaran = {{ $minPenawaran }};
-const lelangId     = {{ $lelang->id }};
+{{-- STICKY BID BAR (Mobile & Scroll Desktop) --}}
+<div id="sticky-bid-bar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] transform translate-y-full transition-transform duration-500 z-40">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+        <div>
+            <div class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Harga Tertinggi</div>
+            <div class="font-black text-green-600 text-lg" id="stickyHargaTertinggi">Rp {{ number_format($hargaTertinggi, 0, ',', '.') }}</div>
+        </div>
+        @if($isActive)
+            <button onclick="bukaModal()" class="bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md">
+                <i class="fas fa-gavel mr-1"></i> Tawar
+            </button>
+        @else
+            <button disabled class="bg-gray-200 text-gray-400 px-6 py-2.5 rounded-xl font-bold text-sm cursor-not-allowed">
+                <i class="fas {{ $statusInfo['icon'] }} mr-1"></i> {{ $statusInfo['label'] }}
+            </button>
+        @endif
+    </div>
+</div>
 
-let pollingInterval = null;
+<script>
+// 1. Variables & Global State
+const lelangId = {{ $lelang->id }};
+const lelangStatusAwal = @json($lelang->status);
+
 let detailIdx = 0;
 let lastUpdate = null;
 
@@ -445,6 +514,8 @@ async function bukaModal() {
     const m = document.getElementById('modalPenawaran');
     m.classList.remove('hidden');
     m.classList.add('flex');
+
+    fetchPenawaran();
 }
 
 function tutupModal() {
@@ -452,6 +523,25 @@ function tutupModal() {
     m.classList.add('hidden');
     m.classList.remove('flex');
 }
+
+// 3. Sticky Bid Bar Logic
+function handleStickyBar() {
+    const stickyBar = document.getElementById('sticky-bid-bar');
+    const mainBtn = document.getElementById('tombol-penawaran');
+    
+    if (!stickyBar || !mainBtn) return;
+
+    const rect = mainBtn.getBoundingClientRect();
+    // Jika bagian bawah tombol utama sudah melewati batas atas layar (scrolled past)
+    if (rect.bottom < 0) {
+        stickyBar.classList.remove('translate-y-full');
+        stickyBar.classList.add('translate-y-0');
+    } else {
+        stickyBar.classList.add('translate-y-full');
+        stickyBar.classList.remove('translate-y-0');
+    }
+}
+window.addEventListener('scroll', handleStickyBar);
 
 // 3. Magic link
 async function kirimMagicLink() {
@@ -512,6 +602,10 @@ async function kirimMagicLink() {
 // 4. Submit penawaran
 async function submitPenawaran() {
 
+    // Dapatkan nilai minimal penawaran terbaru dari atribut 'min' input tersembunyi
+    // Ini penting karena nilai minimal bisa berubah akibat polling
+    const currentMinPenawaran = parseInt(document.getElementById('inputPenawaran').min);
+
     const input = document.getElementById('inputPenawaran');
 
     const nilai = parseInt(input.value);
@@ -527,8 +621,8 @@ async function submitPenawaran() {
     }
 
     // validasi minimal
-    if (nilai < minPenawaran) {
-        err.textContent = 'Penawaran minimal Rp ' + minPenawaran.toLocaleString('id-ID');
+    if (nilai < currentMinPenawaran) {
+        err.textContent = 'Penawaran minimal Rp ' + currentMinPenawaran.toLocaleString('id-ID');
         err.classList.remove('hidden');
         return;
     }
@@ -546,13 +640,20 @@ async function submitPenawaran() {
     btn.innerHTML = 'Mengirim...';
 
     try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        };
+
+        // Hanya tambahkan header X-Socket-ID jika Echo sudah terkoneksi dan memiliki ID
+        const socketId = window.Echo ? window.Echo.socketId() : null;
+        if (socketId) {
+            headers['X-Socket-ID'] = socketId;
+        }
 
         const res = await fetch('/lelang/{{ $lelang->id }}/bid', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            },
+            headers: headers,
             body: JSON.stringify({
                 nilai_penawaran: nilai
             })
@@ -571,10 +672,13 @@ async function submitPenawaran() {
                 'Rp ' + data.min_berikutnya.toLocaleString('id-ID');
 
             tampilToast('🎉 ' + data.message);
-
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
+            
+            // Bersihkan input setelah berhasil
+            document.getElementById('inputPenawaran').value = '';
+            document.getElementById('displayPenawaran').value = '';
+            
+            // Refresh data terbaru
+            fetchPenawaran();
 
         } else if (data.reVerify) {
 
@@ -603,6 +707,27 @@ async function submitPenawaran() {
         '<i class="fas fa-gavel mr-2"></i>Kirim Penawaran';
 }
 
+function tambahBid(jumlah) {
+    const input = document.getElementById('inputPenawaran');
+    const display = document.getElementById('displayPenawaran');
+
+    const currentMinPenawaran = parseInt(input.min);
+    let currentVal = parseInt(input.value);
+    let base;
+
+    // Jika input kosong atau nilai yang ada masih di bawah batas minimum baru,
+    // kita gunakan Harga Tertinggi saat ini (yaitu min - 10000) sebagai basis perhitungan.
+    if (!currentVal || currentVal < currentMinPenawaran) {
+        base = currentMinPenawaran - 10000;
+    } else {
+        base = currentVal;
+    }
+
+    input.value = base + jumlah;
+    display.value = parseInt(input.value).toLocaleString('id-ID');
+    validateKelipatan(input);
+}
+
 // 5. Toast
 function tampilToast(pesan) {
     const toast = document.createElement('div');
@@ -624,13 +749,19 @@ function updateCountdowns() {
         const menitEl  = el.querySelector('[id^="cd-menit-"]');
         const detikEl  = el.querySelector('[id^="cd-detik-"]');
 
+        if (!hariEl) return;
+
         const tombol = document.getElementById('tombol-penawaran');
+
 
         if (diff <= 0) {
             // Update teks countdown
             el.textContent = 'Lelang Telah Berakhir';
             el.classList.remove('text-blue-800');
             el.classList.add('text-red-500');
+            el.innerHTML = '<span class="text-red-500 font-bold uppercase tracking-wider">Lelang Telah Berakhir</span>';
+            
+            stopPolling();
 
             // Update container countdown jadi abu
             const box = el.closest('.bg-blue-50');
@@ -653,8 +784,6 @@ function updateCountdowns() {
                 tombol.className = 'w-full bg-gray-200 text-gray-400 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 text-lg cursor-not-allowed';
                 tombol.innerHTML = '<i class="fas fa-clock"></i> Lelang Telah Berakhir';
             }
-
-            stopPolling();
 
             // Sembunyikan info minimal penawaran
             const infoMin = document.getElementById('info-min-penawaran');
@@ -741,10 +870,46 @@ document.getElementById('modalZoom').addEventListener('click', function(e) {
     if (e.target === this) tutupZoom();
 });
 
+function initEcho() {
+    if (typeof window.Echo === 'undefined') {
+        setTimeout(initEcho, 200);
+        return;
+    }
+
+    console.log('Echo initialized, joining channel: lelang.' + lelangId);
+    const channel = window.Echo.channel('lelang.' + lelangId);
+
+    channel
+        .listen('.penawaran.baru', (e) => {
+            console.log('Real-time update received:', e);
+            
+            // Update Harga & Min Bid secara INSTAN dari data event
+            updateUIPrices(e.hargaTertinggi, e.minBerikutnya, e.hargaFormatted);
+            
+            // Fetch untuk update daftar penawar (HTML)
+            fetchPenawaran();
+        });
+
+    // Sinkronisasi status lelang (Aktif, Selesai, Batal) dari Admin
+    channel.listen('.lelang.status.updated', (e) => {
+        console.log('Detail status update received:', e);
+        if (Number(e.lelangId) !== Number(lelangId)) return;
+        reloadForStatusSync();
+    });
+}
+
+function reloadForStatusSync() {
+    if (window.__statusSyncReloading) return;
+    window.__statusSyncReloading = true;
+    tampilToast('Status lelang berubah. Memperbarui tampilan...');
+    setTimeout(() => window.location.reload(), 700);
+}
+
 document.addEventListener('DOMContentLoaded', function () {
-    @if($lelang->status === 'active')
-    startPolling();
-    @endif
+    // Jalankan sekali saat start untuk sync awal
+    fetchPenawaran();
+
+    initEcho();
 
     @if($lelang->status === 'closed')
 
@@ -771,15 +936,39 @@ document.addEventListener('DOMContentLoaded', function () {
     @endif
 });
 
-document.addEventListener('visibilitychange', () => {
+function updateUIPrices(hargaTertinggi, minPenawaran, hargaFormatted) {
+    // Update di halaman detail
+    const hargaEl = document.getElementById('hargaTertinggiDetail');
+    if (hargaEl) hargaEl.textContent = hargaFormatted;
 
-    if (document.hidden) {
-        stopPolling();
-    } else {
-        startPolling();
+    const minEl = document.getElementById('minPenawaranDetail');
+    if (minEl) minEl.textContent = 'Rp ' + Number(minPenawaran).toLocaleString('id-ID');
+
+    const stickyEl = document.getElementById('stickyHargaTertinggi');
+    if (stickyEl) stickyEl.textContent = hargaFormatted;
+
+    // Update di modal
+    const modalHargaEl = document.getElementById('modalHargaTertinggi');
+    if (modalHargaEl) {
+        modalHargaEl.textContent = hargaFormatted;
+        modalHargaEl.classList.remove('text-gray-400', 'font-normal', 'text-sm');
+        modalHargaEl.classList.add('text-green-600');
     }
 
-});
+    const inputPenawaranEl = document.getElementById('inputPenawaran');
+    if (inputPenawaranEl) {
+        inputPenawaranEl.min = minPenawaran;
+        // Jika nilai yang sedang diketik lebih kecil dari minimum baru, kosongkan agar tidak membingungkan
+        if (inputPenawaranEl.value && parseInt(inputPenawaranEl.value) < minPenawaran) {
+            inputPenawaranEl.value = '';
+            const displayPenawaranEl = document.getElementById('displayPenawaran');
+            if (displayPenawaranEl) displayPenawaranEl.value = '';
+        }
+    }
+    
+    const modalMinPenawaranValueEl = document.querySelector('#modalPenawaran .bg-blue-50 > .flex:last-of-type > .font-bold');
+    if (modalMinPenawaranValueEl) modalMinPenawaranValueEl.textContent = 'Rp ' + Number(minPenawaran).toLocaleString('id-ID');
+}
 
 function validateKelipatan(input) {
     const val = parseInt(input.value);
@@ -800,58 +989,95 @@ function validateKelipatan(input) {
         input.classList.add('border-gray-200', 'focus:ring-blue-400');
     }
 }
-function startPolling() {
-    if (pollingInterval) return; // cegah double interval
 
-    pollingInterval = setInterval(fetchPenawaran, 5000);
-}
+let pollingInterval = null;
 
 function stopPolling() {
-    clearInterval(pollingInterval);
-    pollingInterval = null;
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
 }
+
 async function fetchPenawaran() {
     try {
         const res = await fetch(`/lelang/${lelangId}/polling`);
         const data = await res.json();
 
-        const textMin = document.getElementById('textMinimalPenawaran');
-
-        if (textMin) {
-
-            textMin.textContent =
-                'Minimal Rp ' +
-                Number(data.min_penawaran).toLocaleString('id-ID') +
-                ' • Kelipatan Rp 1.000';
-
-        }
-
         if (!data.success) return;
 
-        // Check if the data has been updated
+        // 1. Update Status Personal (Winning/Outbid)
+        const statusEl = document.getElementById('status-pemenang-personal');
+        if (statusEl) {
+            if (data.is_high_bidder) {
+                statusEl.innerHTML = '<span class="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full border border-green-200 animate-pulse">✅ Anda Penawar Tertinggi</span>';
+                statusEl.classList.remove('hidden');
+            } else if (!data.harga_tertinggi) {
+                statusEl.innerHTML = '<span class="inline-block bg-gray-100 text-gray-600 text-[10px] font-bold px-3 py-1 rounded-full border border-gray-200">💡 Belum ada penawar</span>';
+                statusEl.classList.remove('hidden');
+            } else if (data.has_bid) {
+                statusEl.innerHTML = '<span class="inline-block bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-full border border-red-200">⚠️ Penawaran Anda Terlampaui</span>';
+                statusEl.classList.remove('hidden');
+            } else if (localStorage.getItem('lapau_email')) {
+                statusEl.innerHTML = '<span class="inline-block bg-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1 rounded-full border border-blue-200">ℹ️ Penawaran dimulai, yuk ikut menawar!</span>';
+                statusEl.classList.remove('hidden');
+            }
+        }
+
+        // Update Harga & Minimal Penawaran di UI
+        const hargaFormatted = data.harga_tertinggi 
+            ? 'Rp ' + Number(data.harga_tertinggi).toLocaleString('id-ID')
+            : 'Belum ada';
+            
+        updateUIPrices(data.harga_tertinggi, data.min_penawaran, hargaFormatted);
+
+        // Update teks minimal di modal
+        const textMin = document.getElementById('textMinimalPenawaran');
+        if (textMin) {
+            textMin.textContent = 'Minimal Rp ' + Number(data.min_penawaran).toLocaleString('id-ID') + ' • Kelipatan Rp 1.000';
+        }
+
+        // 2. Update List & Highlight tawaran baru
         if (data.updated_at !== lastUpdate) {
+            const list = document.getElementById('list-penawaran');
+            if (list) {
+                list.innerHTML = data.html;
+                
+                // Animasi flash pada baris terbaru
+                const firstRow = list.querySelector('.penawaran-item');
+                if (firstRow) {
+                    firstRow.classList.add('flash-bid');
+                    setTimeout(() => firstRow.classList.remove('flash-bid'), 3000);
+                }
+            }
             lastUpdate = data.updated_at;
         } else {
             return;
-        }
-
-        const list = document.getElementById('list-penawaran');
-        if (list) list.innerHTML = data.html;
-
-        const harga = document.getElementById('hargaTertinggiDetail');
-        if (harga) {
-            harga.textContent = 'Rp ' + Number(data.harga_tertinggi).toLocaleString('id-ID');
-        }
-
-        const min = document.getElementById('minPenawaranDetail');
-        if (min) {
-            min.textContent = 'Rp ' + Number(data.min_penawaran).toLocaleString('id-ID');
         }
 
     } catch (e) {
         console.log('Polling error:', e);
     }
 }
+
+// Jalankan polling secara rutin setiap 5 detik sebagai fallback Echo
+if (!pollingInterval) {
+    pollingInterval = setInterval(fetchPenawaran, 5000);
+}
 </script>
+
+<style>
+    @keyframes flash-green {
+        0% { background-color: #f0fdf4; }
+        50% { background-color: #bbf7d0; }
+        100% { background-color: #f0fdf4; }
+    }
+    .flash-bid {
+        animation: flash-green 2s ease-in-out;
+    }
+    #sticky-bid-bar {
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+</style>
 
 @endsection

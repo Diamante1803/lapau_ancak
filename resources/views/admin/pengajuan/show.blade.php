@@ -29,7 +29,7 @@
 
         {{-- Kiri: back + judul --}}
         <div class="d-flex align-items-center" style="gap:12px; min-width:0;">
-            <a href="{{ route('admin.dashboard') }}" class="btn-back">
+            <a href="{{ route('admin.pengajuan.index') }}" class="btn-back">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <div style="min-width:0;">
@@ -108,28 +108,6 @@
      CONTENT AREA
 ═══════════════════════════════════════════════════════════ --}}
 <div class="container-fluid detail-content-area">
-
-    {{-- Alert --}}
-    @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4"
-        style="border-left:4px solid #e74a3b;border-radius:8px;">
-        <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    @endif
-    @if(session('success'))
-    <div id="autoAlert" class="alert alert-success alert-dismissible fade show shadow-sm mb-4"
-        style="border-left:4px solid #1a6b3c;border-radius:8px;">
-        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    <script>
-        setTimeout(function () {
-            let a = document.getElementById('autoAlert');
-            if (a) { a.style.transition='opacity 0.5s'; a.style.opacity='0'; setTimeout(()=>a.remove(),500); }
-        }, 4000);
-    </script>
-    @endif
 
     {{-- ══ ROW ATAS: Info + Dokumen ══ --}}
     <div class="row mb-4">
@@ -517,56 +495,6 @@
 </div>
 {{-- END content area --}}
 
-{{-- ═══ MODAL REVISI ═══ --}}
-<div class="modal fade" id="modalRevisi" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content" style="border-radius:12px;overflow:hidden;border:none;">
-            <form method="POST" action="{{ route('admin.pengajuan.revisi', $pengajuan->id) }}">
-                @csrf
-                <div class="modal-header" style="background:linear-gradient(90deg,#856404,#a07800);">
-                    <h5 class="modal-title font-weight-bold text-white">
-                        <i class="fas fa-redo mr-2" style="color:#f6c90e;"></i>Minta Revisi
-                    </h5>
-                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <label class="small font-weight-bold text-muted">Catatan Revisi</label>
-                    <textarea name="catatan_revisi" class="form-control" rows="4"
-                        placeholder="Jelaskan apa yang perlu diperbaiki..." required
-                        style="border-radius:8px;"></textarea>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-sm btn-secondary" data-dismiss="modal" style="border-radius:6px;">Batal</button>
-                    <button type="submit" class="btn btn-sm font-weight-bold"
-                        style="background:#f6c90e;color:#1a6b3c;border-radius:6px;">
-                        <i class="fas fa-paper-plane mr-1"></i>Kirim Revisi
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{{-- ═══ MODAL PREVIEW ═══ --}}
-<div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content" style="border-radius:12px;overflow:hidden;border:none;">
-            <div class="modal-header" style="background:linear-gradient(90deg,#1a6b3c,#145c32);">
-                <h5 class="modal-title text-white font-weight-bold" id="modalTitle">
-                    <i class="fas fa-eye mr-2" style="color:#f6c90e;"></i>Preview
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body text-center" style="background:#f8fff9;">
-                <iframe id="previewFrame" width="100%" height="500px"
-                    style="display:none;border-radius:8px;"></iframe>
-                <img id="previewImage" src=""
-                    style="max-width:100%;display:none;border-radius:8px;" />
-            </div>
-        </div>
-    </div>
-</div>
-
 {{-- ═══════════════════════════════════════════════════════════
      CSS
 ═══════════════════════════════════════════════════════════ --}}
@@ -869,18 +797,6 @@ function toggleCatatanInternal(perkaraId) {
     wrap.style.display = isHidden ? 'block' : 'none';
     icon.className     = isHidden ? 'fas fa-minus-circle mr-1' : 'fas fa-plus-circle mr-1';
     label.textContent  = isHidden ? 'Sembunyikan Catatan Internal' : 'Barang Gabungan? Tambah Catatan Internal';
-}
-
-// ── PREVIEW DOKUMEN ──
-function previewDokumen(url, judul) {
-    const isPdf = url.toLowerCase().endsWith('.pdf');
-    document.getElementById('modalTitle').innerHTML =
-        '<i class="fas fa-eye mr-2" style="color:#f6c90e;"></i>' + judul;
-    document.getElementById('previewFrame').style.display = isPdf ? 'block' : 'none';
-    document.getElementById('previewImage').style.display = isPdf ? 'none' : 'block';
-    if (isPdf) document.getElementById('previewFrame').src = url;
-    else document.getElementById('previewImage').src = url;
-    $('#previewModal').modal('show');
 }
 
 // ── DOKUMEN PERKARA TAMBAH/HAPUS ──

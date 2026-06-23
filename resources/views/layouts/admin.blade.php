@@ -7,14 +7,23 @@
 
     {{-- Favicon --}}
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
-    
+
     {{-- ① Font Awesome + SB Admin CSS --}}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
+    {{-- ② Google Fonts & Material Icons --}}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    {{-- Flatpickr CSS --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
     <link href="{{ asset('template/css/sb-admin-2.min.css') }}" rel="stylesheet">
+
 
     {{-- ③ Slot CSS tambahan dari blade child --}}
     @stack('styles')
+    @vite(['resources/js/app.js'])
 </head>
 
 <body id="page-top">
@@ -29,6 +38,23 @@
             @include('components.topbar')
 
             <div class="container-fluid">
+                {{-- Global Alerts --}}
+                @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4 global-auto-alert"
+                    style="border-left:4px solid #1a6b3c; border-radius:8px; z-index: 1050;">
+                    <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
+                    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                </div>
+                @endif
+
+                @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4 global-auto-alert"
+                    style="border-left:4px solid #e74a3b; border-radius:8px; z-index: 1050;">
+                    <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
+                    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                </div>
+                @endif
+
                 @yield('content')
             </div>
 
@@ -42,7 +68,7 @@
 {{-- ================= MODAL PREVIEW DOKUMEN ================= --}}
 {{-- 1x di layout, dipakai semua halaman via previewDokumen()  --}}
 <div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content" style="border-radius:12px;overflow:hidden;border:none;">
             <div class="modal-header" style="background:linear-gradient(90deg,#1a6b3c,#145c32);">
                 <h5 class="modal-title text-white font-weight-bold" id="modalTitle">
@@ -51,10 +77,10 @@
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body text-center" style="background:#f8fff9;">
-                <iframe id="previewFrame" width="100%" height="500px"
-                    style="display:none;border-radius:8px;border:none;"></iframe>
+                <iframe id="previewFrame" width="100%"
+                    style="display:none;border-radius:8px;border:none; height: 80vh;"></iframe>
                 <img id="previewImage" src=""
-                    style="max-width:100%;display:none;border-radius:8px;" />
+                    style="max-width:100%; max-height: 80vh; display:none; border-radius:8px;" />
             </div>
         </div>
     </div>
@@ -63,7 +89,7 @@
 {{-- ================= SCROLL BUTTON ================= --}}
 <button id="scrollBtn" onclick="toggleScroll()"
     style="position:fixed;bottom:30px;right:30px;width:45px;height:45px;
-           border-radius:50%;background:#4e73df;color:white;border:none;
+           border-radius:50%;background:#1a6b3c;color:white;border:none;
            font-size:18px;cursor:pointer;display:none;align-items:center;
            justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);
            z-index:9999;transition:background 0.2s;">
@@ -78,6 +104,9 @@
 
 {{-- ③ SB Admin --}}
 <script src="{{ asset('template/js/sb-admin-2.min.js') }}"></script>
+
+{{-- Flatpickr JS --}}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 {{-- ⑤ SweetAlert2 --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -126,25 +155,75 @@ function swalToast(icon, title) {
     });
 }
 
+// Global Auto-close Alert
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        $('.global-auto-alert').fadeOut('slow', function() {
+            $(this).remove();
+        });
+    }, 5000);
+});
+
+// ===== GLOBAL COUNTDOWN TIMER =====
+function updateGlobalCountdowns() {
+    document.querySelectorAll('.js-countdown').forEach(function(el) {
+        const endTime = new Date(el.dataset.end).getTime();
+        const now = new Date().getTime();
+        const diff = endTime - now;
+
+        if (diff <= 0) {
+            el.innerHTML = el.dataset.expired || '<span class="text-danger">Berakhir</span>';
+            return;
+        }
+
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+        // Update ID spesifik (untuk detail lelang) jika ada
+        const targetD = el.querySelector('.js-cd-d');
+        const targetH = el.querySelector('.js-cd-h');
+        const targetM = el.querySelector('.js-cd-m');
+        const targetS = el.querySelector('.js-cd-s');
+
+        if (targetD) {
+            targetD.textContent = String(d).padStart(2, '0');
+            targetH.textContent = String(h).padStart(2, '0');
+            targetM.textContent = String(m).padStart(2, '0');
+            targetS.textContent = String(s).padStart(2, '0');
+        } else {
+            // Format teks biasa (untuk tabel list)
+            el.textContent = d > 0 ? `${d}h ${h}j` : (h > 0 ? `${h}j ${m}m` : `${m}m ${s}d`);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setInterval(updateGlobalCountdowns, 1000);
+    updateGlobalCountdowns();
+});
+
 // ===== PREVIEW DOKUMEN (PDF & Gambar) =====
 function previewDokumen(url, nama) {
-    const img   = document.getElementById('previewImage');
+    const modal = $('#previewModal');
+    const img = document.getElementById('previewImage');
     const frame = document.getElementById('previewFrame');
     const title = document.getElementById('modalTitle');
-    if (!img || !frame || !title) return;
-
-    title.innerHTML = '<i class="fas fa-eye mr-2" style="color:#f6c90e;"></i>' + (nama ?? 'Dokumen');
-
-    if (url.match(/\.(jpeg|jpg|png|webp)$/i)) {
-        img.src             = url;
-        img.style.display   = 'block';
+    
+    title.innerHTML = '<i class="fas fa-eye mr-2" style="color:#f6c90e;"></i>' + (nama || 'Preview');
+    
+    if (url.match(/\.(jpeg|jpg|png|webp|gif)$/i)) {
+        img.src = url;
+        img.style.display = 'inline-block';
         frame.style.display = 'none';
     } else {
-        frame.src           = url;
+        frame.src = url;
         frame.style.display = 'block';
-        img.style.display   = 'none';
+        img.style.display = 'none';
     }
-    $('#previewModal').modal('show');
+    
+    modal.modal('show');
 }
 
 // ===== VALIDASI HARGA LIMIT =====
@@ -173,24 +252,55 @@ window.addEventListener('scroll', function () {
         : 'fas fa-arrow-up';
 });
 
-function toggleScroll() {
-    const halfway = document.body.offsetHeight / 2;
-    window.scrollTo({
-        top:      window.scrollY < halfway ? document.body.offsetHeight : 0,
-        behavior: 'smooth'
+function toggleScroll() { window.scrollTo({ top: window.scrollY < (document.body.offsetHeight/2) ? document.body.offsetHeight : 0, behavior: 'smooth' }); }
+
+// Konfigurasi Standar Datetimepicker
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr('input.datetimepicker', {
+                enableTime: true,
+                altInput: true,
+                altFormat: 'd F Y, H:i',
+                dateFormat: 'Y-m-d H:i',
+                time_24hr: true,
+                disableMobile: true,
+                allowInput: true,
+                onChange: function (selectedDates, dateStr, instance) {
+                    const input = instance.input;
+                    const hiddenId = input.id.replace(/^display_/, 'input_');
+                    const hiddenInput = document.getElementById(hiddenId);
+                    if (hiddenInput) {
+                        hiddenInput.value = dateStr ? `${dateStr}:00` : '';
+                    }
+                }
+            });
+            flatpickr('input.datepicker', {
+                altInput: true,
+                altFormat: 'd F Y',
+                dateFormat: 'Y-m-d',
+                disableMobile: true,
+                allowInput: true
+            });
+        }
     });
 }
-
 </script>
 
 {{-- ================================================
      CSS GLOBAL
      ================================================ --}}
 <style>
-/* SweetAlert */
-.swal-custom-popup  { border-radius:14px !important; font-family:inherit !important; }
+/* Global Typography & Body */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f8fafc;
+}
+
+/* SweetAlert Modern */
+.swal-custom-popup  { border-radius:24px !important; font-family: 'Inter', sans-serif !important; border: none !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important; }
 .swal-custom-confirm,
-.swal-custom-cancel { border-radius:8px !important; font-weight:600 !important; padding:8px 20px !important; }
+.swal-custom-cancel { border-radius:12px !important; font-weight:700 !important; padding:12px 24px !important; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.8rem !important; }
 
 /* Foto barang — tombol hapus */
 .photo-delete {
@@ -226,9 +336,219 @@ function toggleScroll() {
     font-size: 0.82rem;
     color: #6c757d;
 }
+
+/* Modern Filter & Interactive Fields (Format Terbaru) */
+:root {
+    --c-theme-primary: #1a6b3c;
+    --c-theme-primary-accent: #e8f5ee;
+    --c-bg-secondary: #f1f5f9;
+    --c-text-primary: #1e293b;
+    --c-text-secondary: #475569;
+}
+
+.filter-card-modern {
+    font-family: 'Inter', sans-serif;
+    border: 1px solid #e0eeea;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(26,107,60,0.05);
+    overflow: visible;
+    position: relative;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--c-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.interactive-field {
+    width: 100%;
+    background-color: var(--c-bg-secondary);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--c-text-primary);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    display: block;
+    appearance: none;
+}
+
+.interactive-field:focus, .interactive-field:hover {
+    outline: none;
+    background-color: #ffffff;
+    border-color: var(--c-theme-primary);
+    box-shadow: 0 0 0 4px rgba(26, 107, 60, 0.12);
+}
+
+.btn-apply {
+    background: var(--c-theme-primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 10px 20px;
+    transition: all 0.3s;
+}
+
+.btn-apply:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(26, 107, 60, 0.3);
+    filter: brightness(1.1);
+}
+
+/* Custom Flatpickr Global Style */
+.flatpickr-calendar {
+    background: #fff;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+    border: 1px solid #e0eeea !important;
+    padding: 10px;
+    font-family: 'Inter', sans-serif;
+}
+.flatpickr-day.selected, .flatpickr-day.selected:hover {
+    background: #1a6b3c !important;
+    border-color: #1a6b3c !important;
+    border-radius: 10px;
+}
+.flatpickr-months .flatpickr-month {
+    color: #1a6b3c !important;
+    fill: #1a6b3c !important;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    font-weight: 700 !important;
+    font-size: 1rem;
+    color: #1a6b3c;
+}
+
+/* Smooth Action Dots Dropdown */
+.no-arrow.dropdown-toggle::after {
+    display: none;
+}
+.btn-action-dots {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+    cursor: pointer;
+}
+.btn-action-dots:hover, .btn-action-dots:focus, .show > .btn-action-dots {
+    background-color: #f1f5f9;
+    color: #1a6b3c;
+    outline: none;
+}
+.dropdown-menu-smooth {
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    padding: 0.5rem !important;
+    margin-top: 4px !important;
+    animation: topbarFade 0.2s ease-out;
+}
+
+/* Custom Searchable Dropdown Styles */
+.custom-dropdown-container {
+    position: relative;
+}
+.custom-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    z-index: 1060;
+    margin-top: 5px;
+    overflow: hidden;
+    border: 1px solid #e0eeea;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    animation: dropdownFade 0.2s ease-out;
+}
+.custom-dropdown-menu .list-wrapper {
+    max-height: 300px;
+    overflow-y: auto;
+}
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.dropdown-item-custom {
+    transition: all 0.2s;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+}
+.dropdown-item-custom:last-child { border-bottom: none; }
+.dropdown-item-custom:hover {
+    background-color: var(--c-theme-primary-accent);
+    color: var(--c-theme-primary);
+}
+.dropdown-toggle-icon {
+    transition: transform 0.2s ease;
+}
 </style>
 
 <script>
+function toggleCustomDropdown(id) {
+    const menu = document.getElementById('menu-' + id);
+    const icon = document.getElementById('icon-' + id);
+    if (!menu || !icon) return;
+    const isHidden = menu.classList.contains('d-none');
+    document.querySelectorAll('.custom-dropdown-menu').forEach(m => { if (m !== menu) m.classList.add('d-none'); });
+    document.querySelectorAll('.dropdown-toggle-icon').forEach(i => { if (i !== icon) i.style.transform = 'rotate(0deg)'; });
+    if (isHidden) {
+        menu.classList.remove('d-none');
+        icon.style.transform = 'rotate(180deg)';
+        const searchInput = menu.querySelector('input');
+        if (searchInput) setTimeout(() => searchInput.focus(), 50);
+    } else {
+        menu.classList.add('d-none');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+function selectDropdownOption(containerId, value, label, targetInputId, labelElementId) {
+    const input = document.getElementById(targetInputId);
+    const labelEl = document.getElementById(labelElementId);
+    const menu = document.getElementById('menu-' + containerId);
+    const icon = document.getElementById('icon-' + containerId);
+    if (input) input.value = value;
+    if (labelEl) labelEl.textContent = label;
+    if (menu) menu.classList.add('d-none');
+    if (icon) icon.style.transform = 'rotate(0deg)';
+}
+function filterDropdownList(containerId, keyword) {
+    const q = keyword.toLowerCase().trim();
+    const items = document.querySelectorAll('#menu-' + containerId + ' .dropdown-item-custom');
+    items.forEach(item => {
+        if (item.classList.contains('no-filter')) return;
+        const searchData = item.getAttribute('data-search') || '';
+        if (searchData.includes(q) || !q) {
+            item.classList.remove('d-none');
+        } else {
+            item.classList.add('d-none');
+        }
+    });
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-dropdown-container')) {
+        document.querySelectorAll('.custom-dropdown-menu').forEach(m => m.classList.add('d-none'));
+        document.querySelectorAll('.dropdown-toggle-icon').forEach(i => i.style.transform = 'rotate(0deg)');
+    }
+});
+
 /**
  * LapauTable — Custom DataTable Global
  *
@@ -613,6 +933,8 @@ const LapauTable = (function () {
     return { init, refresh };
 
 })();
+
+window.LapauTable = LapauTable;
 </script>
 
 {{-- ── CSS LapauTable ─────────────────────────────────────── --}}

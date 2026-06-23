@@ -5,7 +5,7 @@
     @foreach($penawarans as $penawaran)
 
         <div class="px-6 py-4 flex items-center justify-between
-            {{ $loop->first ? 'bg-green-50' : '' }}">
+            {{ $loop->first ? 'bg-green-50' : '' }} penawaran-item">
 
             <div class="flex items-center gap-3">
 

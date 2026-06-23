@@ -5,6 +5,7 @@ use App\Http\Controllers\SatkerController;
 use App\Http\Controllers\LelangController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\AuditLogController;
 use Illuminate\Support\Facades\Route;
 
 // Akses BERSAMA (admin_pusat + admin_satker)
@@ -15,6 +16,8 @@ Route::middleware(['auth', 'role:admin_pusat,admin_satker'])
 
         Route::get('/dashboard', [AdminPusatController::class, 'dashboard'])
             ->name('dashboard');
+        Route::get('lelang/{lelang}/tabel-penawaran', [LelangController::class, 'tabelPenawaran'])
+            ->name('lelang.tabel-penawaran');
 
     });
 
@@ -24,13 +27,12 @@ Route::middleware(['auth', 'role:admin_pusat'])
     ->name('admin.')
     ->group(function () {
 
-        Route::resource('pengajuan', AdminPusatController::class);
+        Route::resource('pengajuan', AdminPusatController::class)
+            ->only(['index', 'show', 'destroy']);
         Route::post('/pengajuan/{pengajuan}/approve', [AdminPusatController::class, 'approve'])
             ->name('pengajuan.approve');
         Route::post('/pengajuan/{pengajuan}/revisi', [AdminPusatController::class, 'revisi'])
             ->name('pengajuan.revisi');
-        Route::post('barang/{id}/lelang', [AdminPusatController::class, 'buatLelang'])
-            ->name('barang.lelang');
 
         Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
         Route::post('users', [UserManagementController::class, 'store'])->name('users.store');
@@ -47,7 +49,6 @@ Route::middleware(['auth', 'role:admin_pusat'])
         Route::get('/lelang/{lelang}/detail', [LelangController::class, 'detail'])->name('lelang.detail');
         Route::get('lelang/selesai', [LelangController::class, 'selesai'])->name('lelang.selesai');
         Route::post('/lelang/{lelang}/batal-aktif', [LelangController::class, 'batalAktif'])->name('lelang.batalAktif');
-
         Route::post('satker', [SatkerController::class, 'store'])->name('satker.store');
         Route::put('satker/{satker}', [SatkerController::class, 'update'])->name('satker.update');
         Route::delete('satker/{satker}', [SatkerController::class, 'destroy'])->name('satker.destroy');
@@ -55,6 +56,9 @@ Route::middleware(['auth', 'role:admin_pusat'])
 
         Route::get('laporan', [LaporanController::class, 'pusat'])
         ->name('laporan.index');    
+
+        Route::get('aktivitas', [AuditLogController::class, 'index'])
+            ->name('aktivitas.index');
         
         Route::delete('/lelang/{lelang}/hapus-penawaran-tertinggi', 
             [LelangController::class, 'hapusPenawaranTertinggi'])

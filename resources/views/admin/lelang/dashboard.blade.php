@@ -58,29 +58,6 @@
         </div>
     </div>
 
-    {{-- ALERT --}}
-    @if(session('success'))
-    <div id="autoAlert" class="alert alert-success alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #1a6b3c; border-radius: 8px;">
-        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    <script>
-        setTimeout(function () {
-            let a = document.getElementById('autoAlert');
-            if (a) { a.style.transition = 'opacity 0.5s'; a.style.opacity = '0'; setTimeout(() => a.remove(), 500); }
-        }, 4000);
-    </script>
-    @endif
-
-    @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #e74a3b; border-radius: 8px;">
-        <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    @endif
-
     {{-- LOOP PENGAJUAN --}}
     @forelse($pengajuans as $pengajuan)
 
@@ -125,19 +102,29 @@
                 {{-- Cek status lelang pengajuan ini --}}
                 @php
                     $semuaBarang = $pengajuan->perkaras->flatMap->barangs;
-                    $lelangAktif = $semuaBarang->filter(fn($b) => $b->lelang && in_array($b->lelang->status, ['scheduled','active']))->first();
-                    $lelangPertama = $semuaBarang->first()?->lelang;
+                    $countAvailable = $semuaBarang->where('status', 'available')->count();
+                    $countScheduled = $semuaBarang->filter(fn($b) => $b->lelang && $b->lelang->status === 'scheduled')->count();
+                    $countActive    = $semuaBarang->filter(fn($b) => $b->lelang && $b->lelang->status === 'active')->count();
+                    $countFinished  = $semuaBarang->filter(fn($b) => in_array($b->status, ['sold', 'unsold']))->count();
+                    $totalBarang    = $semuaBarang->count();
+                    $lelangScheduledSample = $semuaBarang->first(fn($b) => $b->lelang && $b->lelang->status === 'scheduled');
                 @endphp
 
-                @if($lelangAktif && $lelangAktif->lelang->status == 'scheduled')
+                @if($countActive > 0)
+                    <span class="badge px-3 py-2" style="background: #28a745; color: white; border-radius: 20px; font-size: 0.75rem;">
+                        <i class="fas fa-fire mr-1"></i>Live ({{ $countActive }})
+                    </span>
+                @endif
+
+                @if($countScheduled > 0)
+                    <span class="dashboard-scheduled-timer d-none"
+                        data-start="{{ $lelangScheduledSample->lelang->tanggal_mulai->toIso8601String() }}"></span>
 
                     {{-- Info jadwal --}}
                     <div class="text-right mr-2">
                         <small style="color: rgba(255,255,255,0.8);">
                             <i class="fas fa-calendar-check mr-1"></i>
-                            {{ \Carbon\Carbon::parse($lelangAktif->lelang->tanggal_mulai)->format('d M Y H:i') }}
-                            →
-                            {{ \Carbon\Carbon::parse($lelangAktif->lelang->tanggal_selesai)->format('d M Y H:i') }}
+                            {{ \Carbon\Carbon::parse($lelangScheduledSample->lelang->tanggal_mulai)->format('d M Y H:i') }}
                         </small>
                     </div>
 
@@ -165,36 +152,36 @@
                         </button>
                     </form>
 
-                @elseif($lelangAktif && $lelangAktif->lelang->status == 'active')
-                    <span class="badge px-3 py-2"
-                        style="background: #28a745; color: white; border-radius: 20px; font-size: 0.75rem;">
-                        <i class="fas fa-fire mr-1"></i>Sedang Berlangsung
-                    </span>
+                @endif
 
-                @elseif($semuaBarang->every(fn($b) => $b->lelang && $b->lelang->status == 'closed'))
-                    <span class="badge px-3 py-2"
-                        style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.75rem;">
-                        <i class="fas fa-check mr-1"></i>Selesai
-                    </span>
-
-                @else
-                    {{-- Belum dijadwalkan --}}
-                    <span class="badge px-3 py-2"
-                        style="background: #f6c90e; color: #1a6b3c; border-radius: 20px; font-size: 0.75rem;">
-                        ✅ Approved
-                    </span>
-
+                {{-- Tombol Jadwalkan hanya muncul jika ada yang available --}}
+                @if($countAvailable > 0)
+                    @if($countScheduled == 0 && $countActive == 0)
+                        <span class="badge px-3 py-2 mr-2" style="background: #f6c90e; color: #1a6b3c; border-radius: 20px; font-size: 0.75rem;">
+                            Siap Dijadwalkan
+                        </span>
+                    @endif
                     <button class="btn btn-sm font-weight-bold"
                         style="background: #f6c90e; color: #1a6b3c; border-radius: 8px; padding: 6px 14px;"
                         data-toggle="modal"
                         data-target="#modalJadwal-{{ $pengajuan->id }}">
                         <i class="fas fa-gavel mr-1"></i>Jadwalkan Lelang
                     </button>
+                @elseif($countFinished == $totalBarang)
+                    <span class="badge px-3 py-2" style="background: rgba(255,255,255,0.2); color: white; border-radius: 20px; font-size: 0.75rem;">
+                        <i class="fas fa-check-double mr-1"></i>Semua Selesai
+                    </span>
                 @endif
 
             </div>
         </div>
         {{-- MODAL JADWALKAN LELANG — per pengajuan --}}
+        @php
+            $semuaBarang = $pengajuan->perkaras->flatMap->barangs;
+            $totalBarang = $semuaBarang->count(); // Total barang di pengajuan ini
+            $barangTersedia = $semuaBarang->where('status', 'available'); // Barang yang statusnya 'available'
+            $barangTersediaCount = $barangTersedia->count();
+        @endphp
         <div class="modal fade" id="modalJadwal-{{ $pengajuan->id }}" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
@@ -230,35 +217,56 @@
                                     </small>
                                     <small style="color: #1a6b3c;">
                                         <i class="fas fa-box mr-1"></i>
-                                        {{ $pengajuan->perkaras->flatMap->barangs->count() }} barang
+                                        {{ $totalBarang }} barang (Total)
                                     </small>
                                 </div>
                             </div>
 
-                            <div class="alert alert-warning py-2" style="border-radius: 8px; font-size: 0.82rem;">
+                            @if($barangTersediaCount > 0)
+                            <div class="mb-3 p-3 rounded" style="background: #e8f5ee; border: 1px solid #b2d8c0;">
+                                <div class="font-weight-bold mb-2" style="color: #1a6b3c; font-size: 0.9rem;">
+                                    <i class="fas fa-boxes mr-1"></i> Barang yang akan dijadwalkan ({{ $barangTersediaCount }}):
+                                </div>
+                                <ul class="list-unstyled mb-0" style="font-size: 0.85rem; color: #2d3748;">
+                                    @foreach($barangTersedia as $barang)
+                                        <li class="mb-1">
+                                            <i class="fas fa-dot-circle mr-2" style="font-size: 0.7rem; color: #1a6b3c;"></i>
+                                            {{ $barang->nama_barang }}
+                                            <small class="text-muted ml-2">(Rp {{ number_format($barang->harga_awal, 0, ',', '.') }})</small>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                <small class="text-muted mt-2 d-block">
+                                    Barang yang sudah terjual atau sedang aktif tidak akan diubah.
+                                </small>
+                            </div>
+                            @else
+                            <div class="alert alert-info py-2" style="border-radius: 8px; font-size: 0.82rem;">
                                 <i class="fas fa-info-circle mr-1"></i>
-                                Semua <strong>{{ $pengajuan->perkaras->flatMap->barangs->count() }} barang</strong>
-                                dalam pengajuan ini akan dijadwalkan dengan waktu yang sama.
+                                Tidak ada barang yang tersedia untuk dijadwalkan lelang pada pengajuan ini.
                             </div>
-
+                            @endif
                             <div class="form-group">
-                                <label class="small font-weight-bold text-muted">Tanggal & Waktu Mulai</label>
-                                <input type="datetime-local" name="tanggal_mulai"
-                                    class="form-control"
-                                    style="border-radius: 8px;"
-                                    min="{{ now()->format('Y-m-d\TH:i') }}"
-                                    required>
+                                <label class="small font-weight-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">
+                                    <i class="fas fa-clock mr-1 text-success"></i> Waktu Mulai
+                                </label>
+                                <div class="modern-datetime-wrapper">
+                                    <i class="fas fa-calendar-alt modern-datetime-icon text-success"></i>
+                                    <input type="text" id="display_tanggal_mulai_{{ $pengajuan->id }}" class="form-control datetimepicker modern-datetime-input" placeholder="Pilih tanggal & waktu" autocomplete="off" required>
+                                    <input type="hidden" name="tanggal_mulai" id="input_tanggal_mulai_{{ $pengajuan->id }}">
+                                </div>
                             </div>
 
-                            <div class="form-group mb-0">
-                                <label class="small font-weight-bold text-muted">Tanggal & Waktu Selesai</label>
-                                <input type="datetime-local" name="tanggal_selesai"
-                                    class="form-control"
-                                    style="border-radius: 8px;"
-                                    min="{{ now()->format('Y-m-d\TH:i') }}"
-                                    required>
+                            <div class="form-group mt-4">
+                                <label class="small font-weight-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">
+                                    <i class="fas fa-flag-checkered mr-1 text-danger"></i> Waktu Selesai
+                                </label>
+                                <div class="modern-datetime-wrapper">
+                                    <i class="fas fa-calendar-check modern-datetime-icon text-danger"></i>
+                                    <input type="text" id="display_tanggal_selesai_{{ $pengajuan->id }}" class="form-control datetimepicker modern-datetime-input" placeholder="Pilih tanggal & waktu" autocomplete="off" required>
+                                    <input type="hidden" name="tanggal_selesai" id="input_tanggal_selesai_{{ $pengajuan->id }}">
+                                </div>
                             </div>
-
                         </div>
 
                         <div class="modal-footer" style="background: #f8fff9;">
@@ -268,7 +276,7 @@
                             </button>
                             <button type="submit" class="btn btn-sm font-weight-bold"
                                 style="background: #1a6b3c; color: white; border-radius: 6px; padding: 6px 16px;">
-                                <i class="fas fa-calendar-check mr-1"></i>Jadwalkan Semua Barang
+                                <i class="fas fa-calendar-check mr-1"></i>Jadwalkan {{ $barangTersediaCount }} Barang
                             </button>
                         </div>
                     </form>
@@ -459,36 +467,6 @@
 
 </div>
 
-{{-- Modal Preview --}}
-<div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Preview</h5>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="previewImage" src="" style="max-width:100%; display:none;" />
-                <iframe id="previewFrame" width="100%" height="500px" style="display:none;"></iframe>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-function previewDokumen(url, nama) {
-    let img   = document.getElementById('previewImage');
-    let frame = document.getElementById('previewFrame');
-    document.getElementById('modalTitle').innerText = nama ?? 'Preview';
-    if (url.match(/\.(jpeg|jpg|png)$/i)) {
-        img.src = url; img.style.display = 'block'; frame.style.display = 'none';
-    } else {
-        frame.src = url; frame.style.display = 'block'; img.style.display = 'none';
-    }
-    $('#previewModal').modal('show');
-}
-</script>
-
 <script>
 // Simpan index slide aktif per barang
 const slideIndex = {};
@@ -561,6 +539,8 @@ function filterSatkerDashboard(keyword) {
         info.innerHTML = '';
         cards.forEach(card => card.style.boxShadow = '');
     }
+
+    saveDashboardState();
 }
 
 function clearSearchDashboard() {
@@ -568,8 +548,53 @@ function clearSearchDashboard() {
     input.value = '';
     input.focus();
     filterSatkerDashboard('');
+    saveDashboardState();
 }
+const DASHBOARD_STATE_KEY = 'lapau.lelang.dashboard.state';
 const pengajuanState = {};
+
+function saveDashboardState() {
+    const input = document.getElementById('searchSatkerDashboard');
+    const openIds = Object.keys(pengajuanState).filter(id => pengajuanState[id]);
+
+    sessionStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify({
+        search: input?.value || '',
+        openIds,
+        scrollY: window.scrollY,
+    }));
+}
+
+function restoreDashboardState() {
+    let state = null;
+
+    try {
+        state = JSON.parse(sessionStorage.getItem(DASHBOARD_STATE_KEY) || 'null');
+    } catch (e) {
+        state = null;
+    }
+
+    if (!state) return false;
+
+    if (state.search) {
+        const input = document.getElementById('searchSatkerDashboard');
+        if (input) {
+            input.value = state.search;
+            filterSatkerDashboard(state.search);
+        }
+    }
+
+    if (Array.isArray(state.openIds) && state.openIds.length > 0) {
+        state.openIds.forEach(id => {
+            if (!pengajuanState[id]) togglePengajuan(id);
+        });
+    }
+
+    if (Number.isFinite(state.scrollY)) {
+        setTimeout(() => window.scrollTo(0, state.scrollY), 150);
+    }
+
+    return Array.isArray(state.openIds) && state.openIds.length > 0;
+}
 
 function togglePengajuan(id) {
     const body    = document.getElementById('body-pengajuan-' + id);
@@ -591,15 +616,124 @@ function togglePengajuan(id) {
         chevron.style.transform = 'rotate(180deg)';
         pengajuanState[id] = true;
     }
+
+    saveDashboardState();
+}
+
+function scheduleDashboardReload() {
+    if (window.__dashboardStatusReloading) return;
+    window.__dashboardStatusReloading = true;
+    saveDashboardState();
+
+    if (typeof swalToast === 'function') {
+        swalToast('info', 'Status lelang berubah. Dashboard diperbarui...');
+    }
+
+    setTimeout(() => window.location.reload(), 900);
+}
+
+function initDashboardReverb() {
+    if (typeof window.Echo === 'undefined') {
+        setTimeout(initDashboardReverb, 400);
+        return;
+    }
+
+    window.Echo.channel('lelang-updates')
+        .listen('.lelang.status.updated', () => {
+            scheduleDashboardReload();
+        });
+}
+
+function initDashboardScheduleTimers() {
+    document.querySelectorAll('.dashboard-scheduled-timer[data-start]').forEach(timer => {
+        const start = new Date(timer.dataset.start).getTime();
+        const diff = start - Date.now();
+
+        if (!Number.isFinite(start)) return;
+
+        if (diff <= 0) {
+            scheduleDashboardReload();
+            return;
+        }
+
+        setTimeout(() => {
+            scheduleDashboardReload();
+        }, Math.min(diff + 1000, 2147483647));
+    });
 }
 
 // Auto buka pengajuan pertama saat halaman load
 document.addEventListener('DOMContentLoaded', function () {
+    const restoredOpenState = restoreDashboardState();
     const first = document.querySelector('[id^="body-pengajuan-"]');
-    if (first) {
+
+    if (first && !restoredOpenState) {
         const id = first.id.replace('body-pengajuan-', '');
         togglePengajuan(id);
     }
+
+    initDashboardReverb();
+    initDashboardScheduleTimers();
+
+    // Otomatis isi waktu mulai dengan waktu sekarang saat modal jadwal dibuka
+    $('.modal').on('show.bs.modal', function() {
+        const modal = $(this);
+        const mulaiInput = modal.find('input[id^="display_tanggal_mulai_"]');
+        if (mulaiInput.length && !mulaiInput.val()) {
+            const fp = mulaiInput[0]._flatpickr;
+            if (fp) {
+                fp.setDate(new Date(), true); // 'true' untuk mentrigger event onChange
+            }
+        }
+    });
 });
 </script>
+
+<style>
+.modern-datetime-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.modern-datetime-icon {
+    position: absolute;
+    left: 12px;
+    z-index: 4;
+    font-size: 0.9rem;
+}
+.modern-datetime-input {
+    padding-left: 38px !important;
+    border-radius: 12px !important;
+    border: 1.5px solid #e0eeea !important;
+    height: 45px !important;
+    font-size: 0.9rem !important;
+    transition: all 0.3s !important;
+    cursor: pointer;
+}
+.modern-datetime-input:focus {
+    border-color: #1a6b3c !important;
+    box-shadow: 0 0 0 4px rgba(26, 107, 60, 0.1) !important;
+    background-color: #f8fff9 !important;
+}
+.modern-datetime-input::-webkit-calendar-picker-indicator {
+    background: transparent;
+    bottom: 0;
+    color: transparent;
+    cursor: pointer;
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
+}
+    .pagination { margin-bottom: 0; }
+    .page-item.active .page-link { 
+        background-color: #1a6b3c; 
+        border-color: #1a6b3c; 
+    }
+    .page-link { 
+        color: #1a6b3c;
+    }
+</style>
 @endsection

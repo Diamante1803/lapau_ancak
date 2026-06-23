@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Satker;
-use App\Models\AuditLog;
+use App\Models\AuditLogs;
 
 class User extends Authenticatable
 {
@@ -36,7 +36,7 @@ class User extends Authenticatable
 
     public function auditLogs()
     {
-        return $this->hasMany(AuditLog::class);
+        return $this->hasMany(AuditLogs::class);
     }
 
     // Helper

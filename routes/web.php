@@ -11,11 +11,6 @@ require __DIR__.'/admin/satker.php';
 require __DIR__.'/admin/pusat.php';
 require __DIR__.'/pembeli.php';
 
-Route::get('/', function () {
-
-    return view('home');
-});
-
 Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
 })->middleware(['auth'])->name('dashboard');
@@ -43,5 +38,3 @@ Route::post('/lelang/{lelang}/bid', [PenawaranController::class, 'submitPenawara
     ->name('public.bid');
 
 Route::get('/lelang/{lelang}/polling', [PenawaranController::class, 'pollingPenawaran']);
-
-require __DIR__.'/auth.php';

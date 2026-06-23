@@ -36,6 +36,14 @@ class PengajuanLelangPolicy
             && in_array($pengajuan->status, ['draft', 'revision']);
     }
 
+    public function delete(User $user, PengajuanLelang $pengajuan)
+    {
+        if ($user->isAdminPusat()) return true;
+
+        return $user->satker_id === $pengajuan->satker_id
+            && in_array($pengajuan->status, ['draft', 'revision']);
+    }
+
     public function revisi(User $user, PengajuanLelang $pengajuan)
     {
         return $user->isAdminPusat() 

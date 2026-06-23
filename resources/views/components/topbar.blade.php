@@ -2,8 +2,8 @@
     style="background: linear-gradient(90deg, #ffffff 0%, #f0faf4 100%); border-bottom: 3px solid #1a6b3c;">
 
     <!-- Sidebar Toggler (Topbar) -->
-    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-        <i class="fa fa-bars" style="color: #1a6b3c;"></i>
+    <button id="sidebarToggleTop" class="btn btn-link rounded-circle mr-3 shadow-none border-0" style="transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(26,107,60,0.08)'" onmouseout="this.style.backgroundColor='transparent'">
+        <i class="fa fa-bars" style="color: #1a6b3c; font-size: 1.15rem;"></i>
     </button>
 
     <!-- Breadcrumb / Page Info -->
@@ -66,10 +66,10 @@
 
             <!-- Dropdown -->
             <div class="dropdown-menu dropdown-menu-right shadow"
-                style="border: none; border-top: 3px solid #1a6b3c; min-width: 200px;">
+                style="border: none; border-radius: 16px; margin-top: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important; min-width: 220px; overflow: hidden; animation: topbarFade 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
 
                 <!-- Info di dropdown -->
-                <div class="px-3 py-2">
+                <div class="px-4 py-3 bg-light border-bottom">
                     <div class="font-weight-bold text-dark small">{{ auth()->user()->name }}</div>
                     <div class="text-muted" style="font-size: 0.75rem;">{{ auth()->user()->email }}</div>
                 </div>

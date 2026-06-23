@@ -6,10 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use App\Models\Pembeli;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Lelang;
 use App\Models\Penawaran;
 use App\Mail\MagicLinkMail;
+use App\Events\PenawaranBaru;
 use Carbon\Carbon;
 
 class PenawaranController extends Controller
@@ -19,7 +22,15 @@ class PenawaranController extends Controller
         $email = $request->query('email');
         if (!$email) return response()->json(['verified' => false]);
 
+        $sessionPembeliId = session('verified_pembeli_id');
+        $sessionExpired   = session('verified_expired');
+
+        if (!$sessionPembeliId || !$sessionExpired || Carbon::now()->gt(Carbon::parse($sessionExpired))) {
+            return response()->json(['verified' => false]);
+        }
+
         $pembeli = Pembeli::where('email', $email)
+            ->where('id', $sessionPembeliId)
             ->where('magic_token', '!=', null)
             ->whereNotNull('token_expired_at')
             ->where('token_expired_at', '>', now())
@@ -37,6 +48,7 @@ class PenawaranController extends Controller
         return response()->json([
             'verified' => true,
             'nama'     => $pembeli->nama,
+            'email'    => $pembeli->email,
             'expired'  => Carbon::today()->endOfDay()->toIso8601String(),
         ]);
     }
@@ -65,30 +77,6 @@ class PenawaranController extends Controller
             ], 422);
         }
 
-        // Cek apakah sudah punya token valid hari ini
-        $pembeli = Pembeli::where('email', $request->email)->first();
-
-        if ($pembeli && $pembeli->magic_token && 
-            $pembeli->token_expired_at && 
-            Carbon::now()->lt($pembeli->token_expired_at)) {
-
-            // Token masih valid — kirim ulang email saja
-            $magicUrl = route('public.verify', [
-                'token' => $pembeli->magic_token,
-                'email' => $pembeli->email,
-                'lelang'=> $lelang->id,
-            ]);
-
-            Mail::to($pembeli->email)->send(
-                new MagicLinkMail($magicUrl, $pembeli->nama)
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Link verifikasi telah dikirim ulang ke email Anda.'
-            ]);
-        }
-
         // Buat atau update pembeli
         $pembeli = Pembeli::updateOrCreate(
             ['email' => $request->email],
@@ -109,12 +97,16 @@ class PenawaranController extends Controller
             'token_expired_at' => $expired,
         ]);
 
-        // Buat magic URL
-        $magicUrl = route('public.verify', [
-            'token' => $token,
-            'email' => $pembeli->email,
-            'lelang'=> $lelang->id,
-        ]);
+        // Buat signed URL agar cocok dengan validasi hasValidSignature().
+        $magicUrl = URL::temporarySignedRoute(
+            'public.verify',
+            $expired,
+            [
+                'token'  => $token,
+                'email'  => $pembeli->email,
+                'lelang' => $lelang->id,
+            ]
+        );
 
         // Kirim email
         Mail::to($pembeli->email)->send(
@@ -132,6 +124,12 @@ class PenawaranController extends Controller
     // =============================================
     public function verifyMagicLink(Request $request)
     {
+        // Validasi tanda tangan URL (Signed URL)
+        if (!$request->hasValidSignature()) {
+            return redirect()->route('public.index')
+                ->with('error', 'Link verifikasi tidak valid atau sudah kedaluwarsa.');
+        }
+
         $token   = $request->query('token');
         $email   = $request->query('email');
         $lelangId = $request->query('lelang');
@@ -193,8 +191,10 @@ class PenawaranController extends Controller
             ], 422);
         }
 
+        $minHarga = ($lelang->harga_tertinggi ?? $lelang->harga_awal) + 10000;
+
         $request->validate([
-            'nilai_penawaran' => 'required|numeric|min:' . ($lelang->harga_awal ?? 1),
+            'nilai_penawaran' => 'required|numeric|min:' . $minHarga,
         ]);
 
         $nilaiPenawaran = (float) $request->nilai_penawaran;
@@ -208,6 +208,10 @@ class PenawaranController extends Controller
 
                 // 🔒 Lock row lelang agar tidak bentrok
                 $lelang = Lelang::lockForUpdate()->find($lelang->id);
+
+                if (!$lelang || $lelang->status !== 'active') {
+                    throw new \Exception('Lelang ini sudah tidak aktif.');
+                }
 
                 // Ambil harga terkini dari database
                 $hargaSekarang = $lelang->harga_tertinggi
@@ -233,15 +237,28 @@ class PenawaranController extends Controller
 
                 // Update harga tertinggi
                 $lelang->update([
-                    'harga_tertinggi'       => $nilaiPenawaran,
-                    'pemenang_sementara_id' => $pembeliId,
+                    'harga_tertinggi' => $nilaiPenawaran,
+                    'pemenang_id'     => $pembeliId,
                 ]);
 
                 return [
                     'harga_tertinggi' => $nilaiPenawaran,
                     'min_berikutnya'  => $nilaiPenawaran + 10000,
+                    'is_winning'      => true,
                 ];
             });
+
+            // Broadcast ke Reverb (Websockets)
+            broadcast(new PenawaranBaru(
+                $lelang->id,
+                (float) $result['harga_tertinggi'],
+                'Rp ' . number_format($result['harga_tertinggi'], 0, ',', '.'),
+                (float) $result['min_berikutnya'],
+                $lelang->penawarans()->count()
+            ))->toOthers();
+
+            // Hapus cache daftar lelang aktif agar harga tertinggi terbaru muncul di index
+            Cache::forget('public_lelangs_aktif');
 
             return response()->json([
                 'success'         => true,
@@ -250,6 +267,7 @@ class PenawaranController extends Controller
                 'harga_formatted' => 'Rp ' .
                     number_format($result['harga_tertinggi'], 0, ',', '.'),
                 'min_berikutnya'  => $result['min_berikutnya'],
+                'is_winning'      => $result['is_winning'],
             ]);
 
         } catch (\Exception $e) {
@@ -269,6 +287,8 @@ class PenawaranController extends Controller
             ->limit(20)
             ->get();
 
+        $pembeliId = session('verified_pembeli_id');
+
         return response()->json([
             'success' => true,
 
@@ -281,9 +301,13 @@ class PenawaranController extends Controller
             ])->render(),
 
             'harga_tertinggi' => $lelang->harga_tertinggi,
+            'jumlah_penawaran' => $lelang->penawarans()->count(),
 
             'min_penawaran' =>
                 ($lelang->harga_tertinggi ?? $lelang->harga_awal) + 10000,
+            
+            'is_high_bidder' => $pembeliId && $lelang->pemenang_id == $pembeliId,
+            'has_bid' => $pembeliId ? $lelang->penawarans()->where('pembeli_id', $pembeliId)->exists() : false,
         ]);
     }
 }

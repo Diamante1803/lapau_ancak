@@ -21,6 +21,16 @@ class PerkaraController extends Controller
     {
         $this->authorize('update', $pengajuan);
 
+        $request->validate([
+            'nomor_perkara'    => 'required|string|max:255',
+            'nama_tersangka'   => 'required|string|max:255',
+            'tanggal_putusan'  => 'required|date',
+            'dokumen'          => 'nullable|array|max:5',
+            'dokumen.*'        => 'file|mimes:pdf|max:2048',
+            'nama_dokumen'     => 'nullable|array',
+            'nama_dokumen.*'   => 'nullable|string|max:255',
+        ]);
+
         // Simpan perkara
         $perkara = Perkara::create([
             'pengajuan_lelang_id' => $pengajuan->id,
@@ -72,10 +82,16 @@ class PerkaraController extends Controller
 
     public function updatePerkara(Request $request, Perkara $perkara)
     {
+        $this->authorize('update', $perkara->pengajuan);
+
         $request->validate([
             'nomor_perkara' => 'required',
             'nama_tersangka' => 'required',
-            'tanggal_putusan' => 'required|date'
+            'tanggal_putusan' => 'required|date',
+            'dokumen'         => 'nullable|array|max:5',
+            'dokumen.*'       => 'file|mimes:pdf|max:2048',
+            'nama_dokumen'    => 'nullable|array',
+            'nama_dokumen.*'  => 'nullable|string|max:255',
         ]);
 
         // ✅ update data perkara
@@ -128,6 +144,8 @@ class PerkaraController extends Controller
 
     public function destroyPerkara(Perkara $perkara)
     {
+        $this->authorize('update', $perkara->pengajuan);
+
         $perkara->delete();
 
         return back()->with('success', 'Perkara berhasil dihapus');
@@ -135,6 +153,8 @@ class PerkaraController extends Controller
 
     public function uploadDokumenPerkara(Request $request, Perkara $perkara)
     {
+        $this->authorize('update', $perkara->pengajuan);
+
         $request->validate([
             'dokumen'         => 'required|array|max:5',
             'dokumen.*'       => 'file|mimes:pdf|max:2048',
@@ -169,6 +189,7 @@ class PerkaraController extends Controller
     public function destroyDokumenPerkara($id)
     {
         $doc = DokumenPerkara::findOrFail($id);
+        $this->authorize('update', $doc->perkara->pengajuan);
 
         Storage::disk('public')->delete($doc->file_path);
 

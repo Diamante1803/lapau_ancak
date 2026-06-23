@@ -16,6 +16,7 @@ class Barang extends Model
         'perkara_id',
         'nama_barang',
         'deskripsi',
+        'catatan_internal',
         'harga_awal',
         'status'
     ];

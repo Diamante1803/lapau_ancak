@@ -20,7 +20,9 @@ class Lelang extends Model
         'status',
         'harga_awal',
         'harga_tertinggi',
-        'pemenang_id'
+        'pemenang_id',
+        'pemenang_urutan',
+        'catatan_pemenang',
     ];
 
     protected $casts = [

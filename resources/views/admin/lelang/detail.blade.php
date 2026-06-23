@@ -175,7 +175,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">Total Penawar</td>
-                            <td>
+                            <td id="info-total-penawar">
                                 <span class="font-weight-bold" style="color:#1a6b3c;">
                                     {{ $penawarans->count() }} orang
                                 </span>
@@ -183,7 +183,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">Penawaran Tertinggi</td>
-                            <td class="font-weight-bold" style="color:#c0392b; font-size:0.95rem;">
+                            <td id="info-harga-tertinggi" class="font-weight-bold" style="color:#c0392b; font-size:0.95rem;">
                                 @if($topPenawaran)
                                     Rp {{ number_format($topPenawaran->nilai_penawaran, 0, ',', '.') }}
                                 @else
@@ -199,11 +199,11 @@
                 <div class="mt-3 p-3 rounded text-center"
                     style="background: linear-gradient(135deg, #d4edda, #e8f5ee); border: 1px solid #c3e6cb;">
                     <div class="small text-muted mb-1">Sisa Waktu Lelang</div>
-                    <div class="d-flex justify-content-center align-items-end mt-1" style="gap: 8px;" id="countdown-box"
+                    <div class="d-flex justify-content-center align-items-end mt-1 js-countdown" style="gap: 8px;"
                         data-end="{{ $lelang->tanggal_selesai->toIso8601String() }}">
                         @foreach([['id'=>'cd-hari','label'=>'Hari'],['id'=>'cd-jam','label'=>'Jam'],['id'=>'cd-menit','label'=>'Menit'],['id'=>'cd-detik','label'=>'Detik']] as $unit)
                         <div class="text-center">
-                            <div id="{{ $unit['id'] }}" class="font-weight-bold"
+                            <div class="font-weight-bold {{ str_replace('cd-', 'js-cd-', $unit['id']) }}"
                                 style="font-size:1.6rem; color:#1a6b3c; line-height:1; min-width:36px; letter-spacing:1px;">
                                 00
                             </div>
@@ -236,7 +236,7 @@
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 text-center" style="border-radius:12px; border:1px solid #d4edda;">
                     <div class="card-body py-3">
-                        <div style="font-size:1.6rem; font-weight:700; color:#1a6b3c; line-height:1;">
+                        <div id="stat-total-penawar" style="font-size:1.6rem; font-weight:700; color:#1a6b3c; line-height:1;">
                             {{ $penawarans->count() }}
                         </div>
                         <div style="font-size:0.78rem; color:#6c757d; margin-top:4px;">Total Penawar</div>
@@ -247,7 +247,7 @@
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 text-center" style="border-radius:12px; border:1px solid #ffeeba;">
                     <div class="card-body py-3">
-                        <div style="font-size:1.1rem; font-weight:700; color:#856404; line-height:1.3;">
+                        <div id="stat-harga-tertinggi" style="font-size:1.1rem; font-weight:700; color:#856404; line-height:1.3;">
                             @if($topPenawaran)
                                 Rp {{ number_format($topPenawaran->nilai_penawaran, 0, ',', '.') }}
                             @else
@@ -262,12 +262,12 @@
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm h-100 text-center" style="border-radius:12px; border:1px solid #f5c6cb;">
                     <div class="card-body py-3">
-                        <div style="font-size:1.1rem; font-weight:700; color:#c0392b; line-height:1.3;">
+                        <div id="stat-selisih" style="font-size:1.1rem; font-weight:700; color:#c0392b; line-height:1.3;">
                             @if($penawarans->count() > 0)
                                 @php $selisih = $topPenawaran->nilai_penawaran - $barang->harga_awal; @endphp
                                 +Rp {{ number_format($selisih, 0, ',', '.') }}
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">Rp 0</span>
                             @endif
                         </div>
                         <div style="font-size:0.78rem; color:#6c757d; margin-top:4px;">Selisih dari Harga Awal</div>
@@ -284,7 +284,7 @@
                 <span class="font-weight-bold" style="font-size:0.9rem;">
                     <i class="fas fa-users mr-2"></i>Daftar Penawar
                 </span>
-                <span class="badge" style="background:rgba(255,255,255,0.2); color:white; border-radius:20px; font-size:0.75rem;">
+                <span id="badge-total-penawaran" class="badge" style="background:rgba(255,255,255,0.2); color:white; border-radius:20px; font-size:0.75rem;">
                     {{ $penawarans->count() }} penawaran
                 </span>
             </div>
@@ -345,7 +345,7 @@
                                     </td>
 
                                     {{-- NILAI --}}
-                                    <td class="align-middle" data-sort="{{ $penawaran->created_at->timestamp }}">
+                                    <td class="align-middle" data-sort="{{ (float) $penawaran->nilai_penawaran }}">
                                         <div class="font-weight-bold" style="color:{{ $isTop ? '#1a6b3c' : '#2d3748' }};font-size:{{ $isTop ? '0.95rem' : '0.875rem' }};">
                                             Rp {{ number_format($penawaran->nilai_penawaran, 0, ',', '.') }}
                                         </div>
@@ -357,7 +357,7 @@
                                     </td>
 
                                     {{-- WAKTU --}}
-                                    <td class="align-middle text-muted" style="font-size:0.8rem;" data-sort="{{ $penawaran->created_at }}">
+                                    <td class="align-middle text-muted" style="font-size:0.8rem;" data-sort="{{ $penawaran->created_at->timestamp }}">
                                         <i class="fas fa-clock mr-1"></i>
                                         {{ \Carbon\Carbon::parse($penawaran->created_at)->format('d M Y') }}<br>
                                         <span style="font-size:0.75rem;">{{ \Carbon\Carbon::parse($penawaran->created_at)->format('H:i') }} WIB</span>
@@ -440,11 +440,17 @@
             <div class="card-body d-flex flex-wrap gap-2" style="gap: 10px;">
 
                 @if($lelang->status == 'scheduled')
-                <form action="{{ route('admin.lelang.aktivasi', $lelang->id) }}" method="POST" class="mr-2">
+                <form action="{{ route('admin.lelang.aktivasi', $lelang->id) }}" method="POST" class="mr-2" id="form-aktifkan-lelang">
                     @csrf @method('PATCH')
                     <button type="submit" class="btn btn-sm font-weight-bold"
                         style="background:#1a6b3c; color:white; border-radius:8px; padding: 6px 16px;"
-                        onclick="return confirm('Aktifkan lelang ini sekarang?')">
+                        onclick="swalSubmitForm('form-aktifkan-lelang', {
+                            title: 'Aktifkan Lelang?',
+                            text: 'Lelang akan segera dimulai dan penawar dapat mengirimkan bid.',
+                            icon: 'question',
+                            confirmText: 'Ya, Aktifkan',
+                            confirmColor: '#1a6b3c'
+                        })">
                         <i class="fas fa-play mr-1"></i> Aktifkan Lelang
                     </button>
                 </form>
@@ -487,6 +493,23 @@
 
     </div>
 </div>
+
+<style>
+    @keyframes flash-green {
+        0% { background-color: #f0fff4; }
+        35% { background-color: #86efac; }
+        70% { background-color: #bbf7d0; }
+        100% { background-color: transparent; }
+    }
+    #tabelPenawaran tbody tr.flash-bid,
+    #tabelPenawaran tbody tr.flash-bid > td {
+        animation: flash-green 2.4s ease-in-out forwards;
+    }
+    #tabelPenawaran tbody tr.flash-bid {
+        box-shadow: inset 4px 0 0 #22c55e;
+    }
+</style>
+
 @endsection
 @push('scripts')
 <script>
@@ -509,44 +532,151 @@
         currentSlide = index;
     }
 
-    // ─── COUNTDOWN TIMER ──────────────────────────────────────────────────────
-    @if($lelang->status == 'active')
-    function updateCountdown() {
-        const box  = document.getElementById('countdown-box');
-        const end  = new Date(box.dataset.end).getTime();
-        const diff = end - Date.now();
+    // ─── REVERB (WEBSOCKETS) INTEGRATION ─────────────────────────────────────
+    const HARGA_AWAL_LELANG = {{ (float) $barang->harga_awal }};
 
-        if (diff <= 0) {
-            box.style.display = 'none';
-            document.getElementById('countdown-done').style.display = 'block';
+    function formatRupiah(value) {
+        const number = Number(value || 0);
+        return 'Rp ' + number.toLocaleString('id-ID');
+    }
+
+    function normalizeBidPayload(payload) {
+        const hargaTertinggi = payload.hargaTertinggi ?? payload.harga_tertinggi ?? 0;
+        const jumlahPenawaran = payload.jumlahPenawaran ?? payload.jumlah_penawaran ?? 0;
+
+        return {
+            hargaTertinggi: Number(hargaTertinggi || 0),
+            hargaFormatted: payload.hargaFormatted ?? payload.harga_formatted ?? formatRupiah(hargaTertinggi),
+            jumlahPenawaran: Number(jumlahPenawaran || 0),
+        };
+    }
+
+    function updateAdminUI(payload) {
+        const data = normalizeBidPayload(payload);
+        const selisih = Math.max(data.hargaTertinggi - HARGA_AWAL_LELANG, 0);
+        const jumlahText = `${data.jumlahPenawaran} penawaran`;
+        const penawarText = `${data.jumlahPenawaran} orang`;
+
+        const updates = {
+            'stat-total-penawar': data.jumlahPenawaran,
+            'stat-harga-tertinggi': data.hargaTertinggi > 0 ? data.hargaFormatted : '—',
+            'stat-selisih': data.hargaTertinggi > 0 ? '+Rp ' + selisih.toLocaleString('id-ID') : 'Rp 0',
+            'badge-total-penawaran': jumlahText,
+        };
+
+        Object.entries(updates).forEach(([id, value]) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        });
+
+        const infoTotal = document.getElementById('info-total-penawar');
+        if (infoTotal) {
+            infoTotal.innerHTML = `<span class="font-weight-bold" style="color:#1a6b3c;">${penawarText}</span>`;
+        }
+
+        const infoHarga = document.getElementById('info-harga-tertinggi');
+        if (infoHarga) {
+            infoHarga.textContent = data.hargaTertinggi > 0 ? data.hargaFormatted : 'Belum ada penawaran';
+        }
+    }
+
+    function initEcho() {
+        if (typeof window.Echo === 'undefined') {
+            setTimeout(initEcho, 500);
             return;
         }
 
-        const hari  = Math.floor(diff / 86400000);
-        const jam   = Math.floor((diff % 86400000) / 3600000);
-        const menit = Math.floor((diff % 3600000)  / 60000);
-        const detik = Math.floor((diff % 60000)    / 1000);
-
-        document.getElementById('cd-hari').textContent  = pad(hari);
-        document.getElementById('cd-jam').textContent   = pad(jam);
-        document.getElementById('cd-menit').textContent = pad(menit);
-        document.getElementById('cd-detik').textContent = pad(detik);
+        const lelangId = {{ $lelang->id }};
+        console.log('Admin Echo initialized, joining channel: lelang.' + lelangId);
+        
+        window.Echo.channel('lelang.' + lelangId).listen('.penawaran.baru', (e) => {
+            console.log('Admin real-time update received:', e);
+            updateAdminUI(e);
+            // Beri sedikit delay agar DB selesai menulis sebelum fetch tabel
+            setTimeout(refreshPenawaranTable, 300);
+        });
     }
 
-    function pad(n) { return String(n).padStart(2, '0'); }
+    let isRefreshing = false;
+    const TABEL_URL = '{{ route('admin.lelang.tabel-penawaran', $lelang->id) }}';
 
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
-    @endif
+    async function refreshPenawaranTable() {
+        if (isRefreshing) return;
+        isRefreshing = true;
+
+        try {
+            // Tambahkan cache breaker agar browser selalu mengambil data terbaru dari server
+            const res = await fetch(`${TABEL_URL}?t=${new Date().getTime()}`);
+            if (!res.ok) throw new Error('Fetch failed');
+
+            const html = await res.text();
+            const listEl  = document.getElementById('list-penawaran');
+            
+            if (listEl) {
+                // 1. Ganti konten HTML secara total (Force replace)
+                listEl.innerHTML = html;
+
+                // 2. Re-inisialisasi LapauTable agar pagination & sorting aktif kembali
+                initPenawaranTable();
+
+                // 3. Efek Flash pada baris pertama (data tertinggi baru)
+                setTimeout(() => {
+                    const firstRow = document.querySelector('#tabelPenawaran tbody tr:first-child');
+                    if (firstRow) {
+                        firstRow.classList.add('flash-bid');
+                    }
+                }, 250); // Delay sedikit lebih lama agar library selesai manipulasi DOM
+            }
+
+        } catch (err) {
+            console.error('Refresh tabel gagal:', err);
+        } finally {
+            isRefreshing = false;
+        }
+    }
+
+    // Polling Fallback jika Reverb bermasalah (setiap 8 detik)
+    function startPolling() {
+        setInterval(async () => {
+            @if($lelang->status === 'active')
+            try {
+                const res = await fetch(`/lelang/{{ $lelang->id }}/polling`);
+                const data = await res.json();
+                if (data.success) {
+                    const currentHighest = document.getElementById('stat-harga-tertinggi')?.textContent.replace(/[^0-9]/g, '');
+                    if (data.harga_tertinggi && parseInt(data.harga_tertinggi) > (parseInt(currentHighest) || 0)) {
+                        updateAdminUI({
+                            harga_formatted: 'Rp ' + Number(data.harga_tertinggi).toLocaleString('id-ID'),
+                            jumlah_penawaran: data.jumlah_penawaran ?? 0,
+                            harga_tertinggi: data.harga_tertinggi
+                        });
+                        refreshPenawaranTable();
+                    }
+                }
+            } catch (err) { console.log('Polling error:', err); }
+            @endif
+        }, 8000);
+    }
 
 document.addEventListener('DOMContentLoaded', function () {
-    LapauTable.init('tabelPenawaran', {
+    initPenawaranTable();
+    
+    @if($lelang->status === 'active')
+    initEcho();
+    startPolling();
+    @endif
+});
+
+function initPenawaranTable() {
+    if (!window.LapauTable || !document.getElementById('tabelPenawaran')) return;
+
+    window.LapauTable.init('tabelPenawaran', {
         pageSize:  10,
-        sortCol: 2, 
         searchable: false,
         sortDir:   'desc',
+        sortCol: 2, // Kolom Nilai Penawaran
     });
-});
+}
 </script>
 
 @endpush

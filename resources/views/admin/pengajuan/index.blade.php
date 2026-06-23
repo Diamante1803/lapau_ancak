@@ -35,28 +35,6 @@
         @endif
     </div>
 
-    {{-- ================= ALERT ================= --}}
-    @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #e74a3b; border-radius: 8px;">
-        <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    @endif
-    @if(session('success'))
-    <div id="autoAlert" class="alert alert-success alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #1a6b3c; border-radius: 8px;">
-        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    <script>
-        setTimeout(function () {
-            let a = document.getElementById('autoAlert');
-            if (a) { a.style.transition = 'opacity 0.5s'; a.style.opacity = '0'; setTimeout(() => a.remove(), 500); }
-        }, 4000);
-    </script>
-    @endif
-
     {{-- ================= TABEL ================= --}}
     <div class="card shadow mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
 

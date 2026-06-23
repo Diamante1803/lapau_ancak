@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use App\Models\Lelang;
+use App\Events\LelangStatusUpdate;
 use Carbon\Carbon;
 
 class CheckLelangStatus
@@ -21,6 +22,7 @@ class CheckLelangStatus
             ->each(function ($lelang) {
                 $lelang->update(['status' => 'active']);
                 $lelang->barang->update(['status' => 'in_auction']);
+                broadcast(new LelangStatusUpdate($lelang->id, 'active'));
             });
 
         // Update active → closed
@@ -38,6 +40,7 @@ class CheckLelangStatus
             $lelang->barang->update([
                 'status' => $pemenang ? 'sold' : 'unsold'
             ]);
+            broadcast(new LelangStatusUpdate($lelang->id, 'closed'));
         } catch (\Exception $e) {
             \Log::error('CheckLelangStatus error: ' . $e->getMessage());
         }

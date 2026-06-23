@@ -163,7 +163,6 @@
                 $barang       = $lelang->barang;
                 $satker       = $barang->perkara->pengajuan->satker;
                 $fotos        = $barang->fotoBarang;
-                $hargaId      = 'harga-' . $lelang->id;
                 $jumlahBid    = $lelang->penawarans->count();
                 $sisaDetik    = now()->diffInSeconds($lelang->tanggal_selesai, false);
                 $isEndingSoon = $sisaDetik > 0 && $sisaDetik <= 86400; // < 24 jam
@@ -231,7 +230,7 @@
                         </div>
                         <div class="text-right">
                             <div class="text-xs text-gray-400">Penawaran Tertinggi</div>
-                            <div class="font-bold text-green-600" id="{{ $hargaId }}">
+                            <div class="font-bold text-green-600" id="harga-{{ $lelang->id }}">
                                 @if($lelang->harga_tertinggi)
                                     Rp {{ number_format($lelang->harga_tertinggi, 0, ',', '.') }}
                                 @else
@@ -244,7 +243,8 @@
                     {{-- Jumlah bid --}}
                     <div class="text-xs text-gray-400 mb-3">
                         <i class="fas fa-gavel mr-1"></i>
-                        <span class="font-semibold text-gray-600">{{ $jumlahBid }}</span> penawaran masuk
+                        <span id="bids-count-{{ $lelang->id }}" class="font-semibold text-gray-600">{{ $jumlahBid }}</span> 
+                        penawaran masuk
                     </div>
 
                     <div class="bg-blue-50 rounded-xl px-3 py-2 mb-4 text-center">
@@ -507,6 +507,16 @@
     @keyframes fadeDown {
         from { opacity:0; transform:translateY(-6px); }
         to   { opacity:1; transform:translateY(0); }
+    }
+
+    @keyframes flash-update {
+        0% { background-color: #dcfce7; transform: scale(1.02); } /* light green background */
+        50% { background-color: #86efac; transform: scale(1.05); } /* brighter green */
+        100% { background-color: transparent; transform: scale(1); }
+    }
+    .flash-update {
+        animation: flash-update 1.5s ease-out forwards;
+        display: inline-block; /* Ensure transform works */
     }
 
     @media (max-width: 640px) {
@@ -800,8 +810,20 @@ function updateCountdowns() {
             });
 
             const expiredDays = Math.abs(diff) / 86400000;
+
+            // Update Hero Stat Live
+            if (!el.dataset.endedHandled) {
+                el.dataset.endedHandled = 'true';
+                const heroStat = document.getElementById('heroStatAktif');
+                if (heroStat) {
+                    let currentCount = parseInt(heroStat.textContent);
+                    if (currentCount > 0) heroStat.textContent = currentCount - 1;
+                }
+            }
+
             if (expiredDays > GRACE_PERIOD_DAYS) {
                 if (cardEl) cardEl.style.display = 'none';
+                updateCarouselState(); // Recalculate carousel if card hidden
                 return;
             }
 
@@ -1093,12 +1115,98 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function triggerFlash(el) {
+    if (!el) return;
+    el.classList.remove('flash-update');
+    void el.offsetWidth; // Trigger reflow untuk restart animasi
+    el.classList.add('flash-update');
+    setTimeout(() => el.classList.remove('flash-update'), 1500);
+}
+
+// ===== REAL-TIME REVERB INTEGRATION =====
+let echoRetryCount = 0;
+let subscribedChannels = new Set();
+function initEcho() {
+    if (typeof window.Echo === 'undefined') {
+        if (echoRetryCount < 10) { // Batasi retry agar tidak loop selamanya jika memang tidak ada
+            echoRetryCount++;
+            setTimeout(initEcho, 500);
+        }
+        return;
+    }
+
+    console.log('Echo terdeteksi, memulai inisialisasi channel...');
+
+    const cards = document.querySelectorAll('.lelang-card[data-lelang-id]');
+    cards.forEach(card => {
+        const lelangId = card.dataset.lelangId;
+        const channelName = 'lelang.' + lelangId;
+
+        if (subscribedChannels.has(channelName)) return;
+
+        window.Echo.channel(channelName)
+            .listen('.penawaran.baru', (e) => {
+                const hargaBaru = e.hargaFormatted || e.harga_formatted;
+                const jumlahBaru = e.jumlahPenawaran || e.jumlah_penawaran;
+
+                // Update Harga
+                const hargaEl = document.querySelector('#harga-' + lelangId);
+                if (hargaEl && hargaBaru) {
+                    hargaEl.textContent = hargaBaru;
+                    triggerFlash(hargaEl);
+                }
+
+                // Update Jumlah Bid
+                const bidCountEl = document.querySelector('#bids-count-' + lelangId);
+                if (bidCountEl && jumlahBaru !== undefined) {
+                    bidCountEl.textContent = jumlahBaru;
+                    triggerFlash(bidCountEl);
+                }
+            });
+            subscribedChannels.add(channelName);
+    });
+
+    // Global updates untuk aksi admin (penjadwalan, pembatalan, dll)
+    let syncTimeout;
+    window.Echo.channel('lelang-updates')
+        .listen('.lelang.status.updated', (e) => {
+            console.log('Global status update received:', e);
+            // Gunakan timeout agar jika ada update masal, halaman tidak reload berkali-kali
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => window.location.reload(), 800);
+        });
+}
+// Polling Fallback (Opsional namun disarankan agar sinkron dengan halaman detail)
+function startPollingFallback() {
+    setInterval(() => {
+        // Hanya polling lelang yang sedang aktif dan terlihat
+        const activeCards = document.querySelectorAll('#gridLelang .lelang-card:not([style*="display: none"])');
+        activeCards.forEach(async (card) => {
+            const lelangId = card.dataset.lelangId;
+            try {
+                const res = await fetch(`/lelang/${lelangId}/polling`);
+                const data = await res.json();
+                if (data.success) {
+                    const hargaEl = document.querySelector('#harga-' + lelangId);
+                    const formatted = data.harga_tertinggi ? 'Rp ' + Number(data.harga_tertinggi).toLocaleString('id-ID') : 'Belum ada';
+                    if (hargaEl && hargaEl.textContent !== formatted) {
+                        hargaEl.textContent = formatted;
+                        triggerFlash(hargaEl);
+                    }
+                }
+            } catch (err) { /* silent error for polling */ }
+        });
+    }, 10000); // Polling setiap 10 detik di index (lebih jarang dari detail)
+}
+
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         updateCarouselState();
         initTouchSwipe();
         initMouseDrag();
+        initEcho();
+        startPollingFallback();
     }, 100);
     applyFilters();
 });

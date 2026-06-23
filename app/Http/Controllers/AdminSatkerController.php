@@ -14,6 +14,7 @@ use App\Models\Barang;
 use App\Models\FotoBarang;
 use App\Models\DokumenPengajuan;
 use App\Models\DokumenPerkara;
+use App\Http\Controllers\AuditLogController;
 
 class AdminSatkerController extends Controller
 {
@@ -77,19 +78,27 @@ class AdminSatkerController extends Controller
             'status'          => 'draft',
         ]);
     
+        AuditLogController::log($pengajuan->id, 'PengajuanLelang', 'created', "Membuat draft pengajuan lelang: {$pengajuan->judul_pengajuan}");
+
         return redirect()->route('satker.pengajuan.step1', $pengajuan)
             ->with('success', 'Pengajuan berhasil dibuat. Lengkapi dokumen pengajuan.');
     }
 
     public function uploadDokumenPengajuan(Request $request, PengajuanLelang $pengajuan)
     {
+        $this->authorize('update', $pengajuan);
+
         $request->validate([
-            'sk_panitia'            => 'nullable|file|mimes:pdf|max:2048',
-            'izin_penjualan'        => 'nullable|file|mimes:pdf|max:2048',
-            'surat_penetapan_harga' => 'nullable|file|mimes:pdf|max:2048',
+            'files.sk_panitia'            => 'nullable|file|mimes:pdf|max:2048',
+            'files.izin_penjualan'        => 'nullable|file|mimes:pdf|max:2048',
+            'files.surat_penetapan_harga' => 'nullable|file|mimes:pdf|max:2048',
         ], [
             '*.mimes' => 'File harus berformat PDF.',
             '*.max'   => 'Ukuran file maksimal 2MB.',
+        ], [
+            'files.sk_panitia'            => 'SK Panitia',
+            'files.izin_penjualan'        => 'Izin Penjualan',
+            'files.surat_penetapan_harga' => 'Surat Penetapan Harga Limit',
         ]);
 
         // Pastikan minimal 1 file diupload
@@ -107,26 +116,28 @@ class AdminSatkerController extends Controller
         foreach ($jenisList as $jenis) {
             if (!$request->hasFile('files.' . $jenis)) continue;
 
-            // Cek duplikat
-            $sudahAda = DokumenPengajuan::where('pengajuan_lelang_id', $pengajuan->id)
-                ->where('jenis', $jenis)
-                ->exists();
-
-            if ($sudahAda) {
-                $label = Str::of($jenis)->replace('_', ' ')->title();
-                return back()->with('error', $label . ' sudah diupload sebelumnya.');
-            }
-
             $file     = $request->file('files.' . $jenis);
             $ext      = $file->getClientOriginalExtension();
             $namaFile = $jenis . '_' . $namaSatker . '_' . time() . '.' . $ext;
             $path     = $file->storeAs('pengajuan', $namaFile, 'public');
 
-            DokumenPengajuan::create([
-                'pengajuan_lelang_id' => $pengajuan->id,
-                'jenis'               => $jenis,
-                'file_path'           => $path,
-            ]);
+            $dokumen = DokumenPengajuan::where('pengajuan_lelang_id', $pengajuan->id)
+                ->where('jenis', $jenis)
+                ->first();
+
+            if ($dokumen) {
+                if ($dokumen->file_path && Storage::disk('public')->exists($dokumen->file_path)) {
+                    Storage::disk('public')->delete($dokumen->file_path);
+                }
+
+                $dokumen->update(['file_path' => $path]);
+            } else {
+                DokumenPengajuan::create([
+                    'pengajuan_lelang_id' => $pengajuan->id,
+                    'jenis'               => $jenis,
+                    'file_path'           => $path,
+                ]);
+            }
 
             $uploaded[] = Str::of($jenis)->replace('_', ' ')->title();
         }
@@ -137,6 +148,8 @@ class AdminSatkerController extends Controller
 
     public function destroyDokumenPengajuan(DokumenPengajuan $dokumen)
     {
+        $this->authorize('update', $dokumen->pengajuan);
+
         // hapus file dari storage
         if (Storage::disk('public')->exists($dokumen->file_path)) {
             Storage::disk('public')->delete($dokumen->file_path);
@@ -178,18 +191,20 @@ class AdminSatkerController extends Controller
     // =========================
     public function destroy(PengajuanLelang $pengajuan)
     {
+        $this->authorize('delete', $pengajuan);
+
         $pengajuan->load([
             'dokumenPengajuan',
-            'perkaras.dokumenPerkaras',
-            'perkaras.barangs.FotoBarangs'
+            'perkaras.dokumenPerkara',
+            'perkaras.barangs.fotoBarang'
         ]);
 
         DB::transaction(function () use ($pengajuan) {
 
             // 1. Dokumen pengajuan
-            foreach ($pengajuan->dokumen ?? [] as $doc) {
-                if ($doc->file_path && Storage::exists($doc->file_path)) {
-                    Storage::delete($doc->file_path);
+            foreach ($pengajuan->dokumenPengajuan ?? [] as $doc) {
+                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                    Storage::disk('public')->delete($doc->file_path);
                 }
                 $doc->delete();
             }
@@ -200,9 +215,9 @@ class AdminSatkerController extends Controller
                 // 🔸 Barang
                 foreach ($perkara->barangs ?? [] as $barang) {
 
-                    foreach ($barang->fotoBarangs ?? [] as $docBarang) {
-                        if ($docBarang->file_path && Storage::exists($docBarang->file_path)) {
-                            Storage::delete($docBarang->file_path);
+                    foreach ($barang->fotoBarang ?? [] as $docBarang) {
+                        if ($docBarang->file_path && Storage::disk('public')->exists($docBarang->file_path)) {
+                            Storage::disk('public')->delete($docBarang->file_path);
                         }
                         $docBarang->delete();
                     }
@@ -211,9 +226,9 @@ class AdminSatkerController extends Controller
                 }
 
                 // 🔸 Dokumen perkara
-                foreach ($perkara->dokumenPerkaras ?? [] as $docPerkara) {
-                    if ($docPerkara->file_path && Storage::exists($docPerkara->file_path)) {
-                        Storage::delete($docPerkara->file_path);
+                foreach ($perkara->dokumenPerkara ?? [] as $docPerkara) {
+                    if ($docPerkara->file_path && Storage::disk('public')->exists($docPerkara->file_path)) {
+                        Storage::disk('public')->delete($docPerkara->file_path);
                     }
                     $docPerkara->delete();
                 }
@@ -222,6 +237,8 @@ class AdminSatkerController extends Controller
             }
 
             // 3. Hapus pengajuan
+            AuditLogController::log($pengajuan->id, 'PengajuanLelang', 'deleted', "Menghapus draft/revisi pengajuan: {$pengajuan->judul_pengajuan}");
+
             $pengajuan->delete();
         });
 
@@ -319,6 +336,8 @@ class AdminSatkerController extends Controller
             'tanggal_pengajuan' => now(),
         ]);
 
+        AuditLogController::log($pengajuan->id, 'PengajuanLelang', 'submitted', "Mengirim pengajuan lelang ke Pusat: {$pengajuan->judul_pengajuan}");
+
         return back()->with('success', 'Pengajuan berhasil dikirim ke Admin Pusat.');
     }
 
@@ -386,12 +405,7 @@ class AdminSatkerController extends Controller
     
     public function saveStep2(Request $request, PengajuanLelang $pengajuan)
     {
-        // Ganti authorize dengan pengecekan manual
-        $user = auth()->user();
-
-        if ($user->role === 'admin_satker' && $user->satker_id !== $pengajuan->satker_id) {
-            abort(403, 'Anda tidak memiliki akses ke pengajuan ini.');
-        }
+        $this->authorize('update', $pengajuan);
 
         // Step 2 tidak ada form khusus
         $pengajuan->load(['dokumenPengajuan', 'perkaras.dokumenPerkara', 'perkaras.barangs']);

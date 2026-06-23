@@ -15,20 +15,6 @@
             </button>
         </form>
     </div>
-    @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert" id="autoAlert">
-        {{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert">
-            <span>&times;</span>
-        </button>
-    </div>
-
-    <script>
-        setTimeout(function () {
-            $('#autoAlert').alert('close');
-        }, 5000); // 5000 ms = 5 detik
-    </script>
-    @endif
 
     {{-- ================= INFO PENGAJUAN ================= --}}
     <div class="card shadow mb-4">
@@ -67,15 +53,6 @@
 
                 <button class="btn btn-primary btn-sm">Upload</button>
             </form>
-
-            @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="close" data-dismiss="alert">
-                    <span>&times;</span>
-                </button>
-            </div>
-            @endif
 
             <div class="card-body">
             <ul class="list-group">

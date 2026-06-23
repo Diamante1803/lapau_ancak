@@ -16,13 +16,6 @@ class RoleMiddleware
 
         // Cek apakah role user ada di daftar role yang diizinkan
         if (!in_array(auth()->user()->role, $roles)) {
-            $role = auth()->user()->role;
-
-            if ($role === 'admin_satker') {
-                return redirect()->route('admin.dashboard')
-                    ->with('error', 'Anda tidak memiliki akses ke halaman tersebut.');
-            }
-
             abort(403, 'Tidak punya akses');
         }
 

@@ -5,6 +5,20 @@
 @php
     $isPusat  = auth()->user()->role === 'admin_pusat';
     $isSatker = auth()->user()->role === 'admin_satker';
+    $lelangs = $lelangs->filter(fn($l) => now()->lessThan($l->tanggal_selesai));
+
+    // Detail penawar untuk modal
+    $biddersDetail = $lelangs->flatMap->penawarans
+        ->groupBy('pembeli_id')
+        ->map(function ($bids) {
+            $pembeli = $bids->first()->pembeli;
+            return [
+                'nama'  => $pembeli->nama ?? 'Anonim',
+                'kontak'=> ($pembeli->no_hp ?? '-') . ' / ' . ($pembeli->email ?? '-'),
+                'items' => $bids->map(fn($b) => $b->lelang->barang->nama_barang)->unique(),
+                'total_bids' => $bids->count()
+            ];
+        });
 @endphp
 
 <div class="container-fluid">
@@ -36,119 +50,74 @@
         </div>
     </div>
 
-    {{-- ================= ALERT ================= --}}
-    @if(session('success'))
-    <div id="autoAlert" class="alert alert-success alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #1a6b3c; border-radius: 8px;">
-        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    <script>
-        setTimeout(function () {
-            let a = document.getElementById('autoAlert');
-            if (a) { a.style.transition = 'opacity 0.5s'; a.style.opacity = '0'; setTimeout(() => a.remove(), 500); }
-        }, 4000);
-    </script>
-    @endif
-    @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #e74a3b; border-radius: 8px;">
-        <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    @endif
-
     {{-- ================= STAT MINI CARDS ================= --}}
-    <div class="row mb-4">
+    <div class="row mb-4 stat-cards-wrapper">
 
         {{-- Total Aktif --}}
         <div class="col-md-3 col-sm-6 mb-3">
-            <div class="card shadow-sm h-100 py-2"
-                style="border: none; border-radius: 12px; border-left: 4px solid #1a6b3c;">
-                <div class="card-body d-flex align-items-center">
-                    <div class="mr-3">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: #1a6b3c;">Lelang Berjalan</div>
-                        <div class="h4 mb-0 font-weight-bold text-gray-800">{{ $lelangs->count() }}</div>
-                    </div>
-                    <div class="ml-auto">
-                        <div style="width:42px;height:42px;border-radius:50%;background:rgba(26,107,60,0.1);display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-gavel" style="color:#1a6b3c;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <x-statistic-card
+                title="Lelang Berjalan"
+                value="{{ number_format($lelangs->count(), 0, ',', '.') }}"
+                unit="Lot"
+                icon="fa-gavel"
+                color="#1a6b3c"
+            >
+                <x-slot:badge>
+                    <span class="d-inline-flex align-items-center" style="gap:4px;">
+                        <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite;display:inline-block;"></span>
+                        LIVE
+                    </span>
+                </x-slot:badge>
+            </x-statistic-card>
         </div>
 
         {{-- Segera Berakhir (< 24 jam) --}}
         <div class="col-md-3 col-sm-6 mb-3">
             @php
-                $segeraBerakhir = $lelangs->filter(function($l) {
-                    return now()->diffInHours($l->tanggal_selesai, false) <= 24
-                        && now()->diffInHours($l->tanggal_selesai, false) >= 0;
-                })->count();
+                $urgentLelangs = $lelangs->filter(function($l) {
+                    return now()->diffInHours($l->tanggal_selesai, false) <= 24;
+                });
+                $segeraBerakhir = $urgentLelangs->count();
             @endphp
-            <div class="card shadow-sm h-100 py-2"
-                style="border: none; border-radius: 12px; border-left: 4px solid #f6c90e;">
-                <div class="card-body d-flex align-items-center">
-                    <div class="mr-3">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: #856404;">Segera Berakhir</div>
-                        <div class="h4 mb-0 font-weight-bold text-gray-800">{{ $segeraBerakhir }}</div>
-                        <div class="text-xs text-muted">Sisa &lt; 24 jam</div>
-                    </div>
-                    <div class="ml-auto">
-                        <div style="width:42px;height:42px;border-radius:50%;background:rgba(246,201,14,0.12);display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-hourglass-half" style="color:#f6c90e;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <x-statistic-card
+                title="Segera Berakhir"
+                value="{{ number_format($segeraBerakhir, 0, ',', '.') }}"
+                unit="Lot"
+                icon="fa-hourglass-half"
+                color="#f59e0b"
+            >
+                @if($segeraBerakhir > 0)
+                    <x-slot:badge>Urgent</x-slot:badge>
+                @endif
+            </x-statistic-card>
         </div>
 
         {{-- Total Nilai Terkini --}}
         <div class="col-md-3 col-sm-6 mb-3">
             @php
-                $totalNilai = $lelangs->sum(function($l) {
-                    return $l->penawarans->max('harga_tawar') ?? $l->harga_awal;
+                // Menjumlahkan nilai penawaran tertinggi dari lelang yang aktif (mengabaikan harga limit jika belum ada bid)
+                $totalValuasiAktif = $lelangs->sum(function($l) {
+                    return $l->penawarans->max('nilai_penawaran') ?? 0;
                 });
             @endphp
-            <div class="card shadow-sm h-100 py-2"
-                style="border: none; border-radius: 12px; border-left: 4px solid #36b9cc;">
-                <div class="card-body d-flex align-items-center">
-                    <div class="mr-3">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: #36b9cc;">Total Nilai Terkini</div>
-                        <div class="h6 mb-0 font-weight-bold text-gray-800">
-                            Rp {{ number_format($totalNilai, 0, ',', '.') }}
-                        </div>
-                    </div>
-                    <div class="ml-auto">
-                        <div style="width:42px;height:42px;border-radius:50%;background:rgba(54,185,204,0.1);display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-money-bill-wave" style="color:#36b9cc;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <x-statistic-card
+                title="Total Penawaran Tertinggi"
+                value="Rp {{ number_format($totalValuasiAktif, 0, ',', '.') }}"
+                icon="fa-money-bill-wave"
+                color="#0284c7"
+            />
         </div>
 
-        {{-- Total Penawaran Masuk --}}
-        <div class="col-md-3 col-sm-6 mb-3">
-            @php
-                $totalPenawaran = $lelangs->sum(fn($l) => $l->penawarans->count());
-            @endphp
-            <div class="card shadow-sm h-100 py-2"
-                style="border: none; border-radius: 12px; border-left: 4px solid #8b1a1a;">
-                <div class="card-body d-flex align-items-center">
-                    <div class="mr-3">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1" style="color: #8b1a1a;">Total Penawaran</div>
-                        <div class="h4 mb-0 font-weight-bold text-gray-800">{{ $totalPenawaran }}</div>
-                        <div class="text-xs text-muted">Dari semua barang</div>
-                    </div>
-                    <div class="ml-auto">
-                        <div style="width:42px;height:42px;border-radius:50%;background:rgba(139,26,26,0.08);display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-hand-paper" style="color:#8b1a1a;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        {{-- Total Penawar (Partisipan) --}}
+        <div class="col-md-3 col-sm-6 mb-3" style="cursor: pointer;" data-toggle="modal" data-target="#modalDetailPenawar" 
+            title="Klik untuk melihat detail partisipan penawar">
+            <x-statistic-card
+                title="Total Penawar"
+                value="{{ number_format($biddersDetail->count(), 0, ',', '.') }}"
+                unit="Orang"
+                icon="fa-users"
+                color="#991b1b"
+            />
         </div>
 
     </div>
@@ -361,7 +330,7 @@
         {{-- Footer card --}}
         @if($lelangs->count() > 0)
         <div class="card-footer py-2 px-4 d-flex justify-content-between align-items-center"
-            style="background: #f8fff9; border-top: 1px solid #e0eeea;">
+            style="background: #f8fff9; border-top: 1px solid #e0eeea; border-radius: 0 0 12px 12px;">
             <small class="text-muted">
                 <i class="fas fa-info-circle mr-1"></i>
                 Halaman ini menampilkan semua barang dengan status <strong>aktif</strong>
@@ -377,12 +346,111 @@
 
 </div>
 
+{{-- Modal Detail Penawar --}}
+<div class="modal fade" id="modalDetailPenawar" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow" style="border-radius:16px;">
+            <div class="modal-header border-0 pb-0" style="padding: 24px;">
+                <h5 class="modal-title font-weight-bold" style="color:#1e293b;">
+                    <i class="fas fa-users mr-2 text-danger"></i> 
+                    Partisipan Penawar Aktif
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <p class="text-muted small mb-4">Daftar penawar yang sedang aktif berpartisipasi dalam lelang-lelang di atas.</p>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr style="background:#f8fafc; color:#64748b; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">
+                                <th class="border-0 px-3">Penawar</th>
+                                <th class="border-0">Barang yang Ditawar</th>
+                                <th class="border-0 text-center pr-3">Aktivitas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($biddersDetail as $detail)
+                            <tr>
+                                <td class="px-3 align-top">
+                                    <div class="font-weight-bold text-dark">{{ $detail['nama'] }}</div>
+                                    <div class="text-muted small">{{ $detail['kontak'] }}</div>
+                                </td>
+                                <td class="align-top">
+                                    @foreach($detail['items'] as $itemName)
+                                        <div class="small text-dark mb-1">• {{ $itemName }}</div>
+                                    @endforeach
+                                </td>
+                                <td class="text-center align-middle pr-3">
+                                    <span class="badge badge-pill bg-success-light text-success px-3">{{ $detail['total_bids'] }} Bid</span>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">Belum ada penawaran masuk.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0" style="padding: 24px;">
+                <button type="button" class="btn btn-secondary font-weight-bold px-4" data-dismiss="modal" style="border-radius:10px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- ================= SCRIPTS ================= --}}
 <style>
 @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50%       { opacity: 0.85; transform: scale(1.03); }
 }
+
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    background: #ffffff;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px -5px rgba(0,0,0,0.08) !important;
+}
+.stat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+.bg-gradient-success { background: linear-gradient(135deg, #1a6b3c 0%, #22c55e 100%); }
+.bg-gradient-warning { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+.bg-gradient-info    { background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%); }
+.bg-gradient-danger  { background: linear-gradient(135deg, #991b1b 0%, #ef4444 100%); }
+
+.bg-success-light { background: rgba(34, 197, 94, 0.1); }
+.bg-warning-light { background: rgba(245, 158, 11, 0.1); }
+.border-warning-soft { border: 1px solid rgba(245, 158, 11, 0.2) !important; }
+
+.card-bg-icon {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    font-size: 4rem;
+    opacity: 0.03;
+    transform: rotate(-15deg);
+    pointer-events: none;
+}
+.animate-pulse-soft { animation: pulse-soft 2s infinite; }
+@keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+.font-weight-600 { font-weight: 600; }
+.font-weight-800 { font-weight: 800; }
 </style>
 
 <script>

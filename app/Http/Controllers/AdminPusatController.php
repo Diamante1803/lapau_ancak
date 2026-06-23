@@ -8,11 +8,14 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;  
 use App\Models\Barang;
+use App\Models\Perkara;
 use App\Models\Satker;
 use App\Models\User;
 use App\Models\PengajuanLelang;
 use App\Models\Lelang;
 use App\Models\LaporanLelang;
+use App\Http\Controllers\AuditLogController;
+use Illuminate\Support\Facades\Cache;
 
 class AdminPusatController extends Controller
 {
@@ -21,56 +24,160 @@ class AdminPusatController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $user     = auth()->user();
         $isPusat  = $user->role === 'admin_pusat';
         $isSatker = $user->role === 'admin_satker';
 
-        // Query base — filter per satker jika admin_satker
+        $dari   = $request->query('dari');
+        $sampai = $request->query('sampai');
+
         $basePengajuan = PengajuanLelang::query();
         $baseLelang    = Lelang::query();
+        $basePerkara   = Perkara::query();
+        $baseBarang    = Barang::query();
 
         if ($isSatker) {
             $basePengajuan->where('satker_id', $user->satker_id);
-            $baseLelang->whereHas('barang.perkara.pengajuan', function($q) use ($user) {
-                $q->where('satker_id', $user->satker_id);
-            });
+            $baseLelang->whereHas('barang.perkara.pengajuan', fn($q) => 
+                $q->where('satker_id', $user->satker_id));
+            $basePerkara->whereHas('pengajuan', fn($q) => 
+                $q->where('satker_id', $user->satker_id));
+            $baseBarang->whereHas('perkara.pengajuan', fn($q) => 
+                $q->where('satker_id', $user->satker_id));
         }
 
-        $stats = [
-            // Total pengajuan (semua status)
-            'total_pengajuan' => (clone $basePengajuan)->count(),
+        // Helper closure untuk standarisasi filter tanggal di berbagai query
+        $filterDates = function($query, $column = 'created_at') use ($dari, $sampai) {
+            if ($dari && $sampai) {
+                return $query->whereBetween($column, [$dari . ' 00:00:00', $sampai . ' 23:59:59']);
+            }
+            return $query;
+        };
 
-            // Lelang aktif saat ini
-            'lelang_aktif' => (clone $baseLelang)->where('status', 'active')->count(),
+        // KPI Stats
+        $cacheKey = 'admin_stats_' . ($isSatker ? $user->satker_id : 'pusat') . '_' . $dari . '_' . $sampai;
+        
+        $stats = Cache::remember($cacheKey, now()->addMinutes(10), function() use ($filterDates, $basePengajuan, $baseLelang) {
+            return [
+                'total_pengajuan' => $filterDates(clone $basePengajuan)->count(),
+                'menunggu'        => $filterDates(clone $basePengajuan)->where('status', 'submitted')->count(),
+                'disetujui'       => $filterDates(clone $basePengajuan, 'updated_at')->where('status', 'approved')->count(),
+                'lelang_aktif'    => $filterDates(clone $baseLelang, 'tanggal_mulai')->where('status', 'active')->count(),
+                'barang_terjual'  => $filterDates(clone $baseLelang, 'tanggal_selesai')->where('status', 'closed')->whereNotNull('pemenang_id')->count(),
+                'total_nilai'     => $filterDates(clone $baseLelang, 'tanggal_selesai')
+                                        ->where('status', 'closed')
+                                        ->whereNotNull('pemenang_id')
+                                        ->whereHas('laporan', fn($q) => $q->whereNotNull('file_bukti_bayar'))
+                                        ->sum('harga_tertinggi'),
+                'pnbp_seharusnya' => $filterDates(clone $baseLelang, 'tanggal_selesai')
+                                        ->where('status', 'closed')
+                                        ->whereNotNull('pemenang_id')
+                                        ->sum('harga_tertinggi'),
+            ];
+        });
 
-            // Barang terjual (lelang closed + ada pemenang)
-            'barang_terjual' => (clone $baseLelang)
-                ->where('status', 'closed')
-                ->whereNotNull('pemenang_id')
-                ->count(),
+        // Detail Belum Bayar (Piutang)
+        $unpaidDetails = $filterDates(clone $baseLelang, 'tanggal_selesai')
+            ->where('status', 'closed')
+            ->whereNotNull('pemenang_id')
+            ->whereDoesntHave('laporan', fn($q) => $q->whereNotNull('file_bukti_bayar'))
+            ->with(['barang.perkara.pengajuan.satker'])
+            ->get()
+            ->groupBy(fn($l) => optional($l->barang->perkara->pengajuan->satker)->nama_satker ?? 'Tanpa Satker')
+            ->map(fn($items, $name) => [
+                'nama_satker' => $name,
+                'jumlah_lot'  => $items->count(),
+                'total_nilai' => $items->sum('harga_tertinggi'),
+                'daftar_barang' => $items->map(fn($l) => $l->barang->nama_barang)->toArray(),
+            ]);
 
-            // Total nilai penjualan final (harga_tertinggi saat closed)
-            'total_nilai' => LaporanLelang::whereNotNull('file_bukti_bayar')
-                ->join('lelangs', 'laporan_lelangs.lelang_id', '=', 'lelangs.id')
-                ->sum('lelangs.harga_tertinggi'),
+        // Detail Aset Terjual
+        $soldDetails = $filterDates(clone $baseLelang, 'tanggal_selesai')
+            ->where('status', 'closed')
+            ->whereNotNull('pemenang_id')
+            ->with(['barang.perkara.pengajuan.satker', 'pemenang'])
+            ->get()
+            ->groupBy(fn($l) => optional($l->barang->perkara->pengajuan->satker)->nama_satker ?? 'Tanpa Satker')
+            ->map(fn($items, $name) => [
+                'nama_satker' => $name,
+                'jumlah_lot'  => $items->count(),
+                'total_nilai' => $items->sum('harga_tertinggi'),
+                'daftar_barang' => $items->map(fn($l) => [
+                    'nama' => $l->barang->nama_barang,
+                    'pemenang' => optional($l->pemenang)->nama ?? 'N/A',
+                    'nilai' => $l->harga_tertinggi
+                ])->toArray(),
+            ]);
+
+        // Data Perkara
+        $statsPerkara = [
+            'total'   => $filterDates(clone $basePerkara)->count(),
+            'aktif'   => (clone $basePerkara)->whereHas('barangs', fn($q) => $q->where('status', 'in_auction'))->count(),
+            'selesai' => $filterDates(clone $basePerkara, 'updated_at')->whereHas('barangs', fn($q) => $q->where('status', 'sold'))->count(),
         ];
 
-        $pengajuans = (clone $basePengajuan)
-            ->with([
-                'satker',
-                'perkaras.barangs.lelang', ])
-            ->when($isPusat, function($q) {        
-            $q->whereNotIn('status', ['draft']);
-            })
+        // Data Barang
+        $statsBarang = [
+            'total'         => $filterDates(clone $baseBarang)->count(),
+            'belum_lelang'  => $filterDates(clone $baseBarang)->where('status', 'available')->count(),
+            'sedang_lelang' => (clone $baseBarang)->where('status', 'in_auction')->count(),
+            'terjual'       => $filterDates(clone $baseBarang, 'updated_at')->where('status', 'sold')->count(),
+        ];
+
+        // Monitoring Satker (hanya admin pusat)
+        $monitoringSatker = $isPusat 
+            ? Satker::with(['pengajuans.perkaras.barangs'])->get()
+            : collect();
+
+        // Aktivitas terbaru
+        $aktivitasRaw = $filterDates(clone $basePengajuan, 'updated_at')
+            ->with('satker')
+            ->whereIn('status', ['submitted', 'approved', 'revision'])
+            ->latest('updated_at')
+            ->take(8)
+            ->get();
+
+        $aktivitasTerbaru = $aktivitasRaw->map(function($p) {
+            $keterangan = match($p->status) {
+                'submitted' => 'Pengajuan baru dikirim: ' . $p->judul_pengajuan,
+                'approved'  => 'Pengajuan disetujui: ' . $p->judul_pengajuan,
+                'revision'  => 'Pengajuan diminta revisi: ' . $p->judul_pengajuan,
+                default     => $p->judul_pengajuan,
+            };
+            return [
+                'keterangan' => $keterangan,
+                'satker'     => optional($p->satker)->nama_satker ?? '-',
+                'waktu'      => $p->updated_at->diffForHumans(),
+                'status'     => $p->status,
+            ];
+        });
+
+        // Lelang akan berakhir (24 jam ke depan)
+        $lelangAkanBerakhir = (clone $baseLelang)
+            ->with(['barang.fotoBarang', 'barang.perkara.pengajuan.satker'])
+            ->where('status', 'active')
+            ->where('tanggal_selesai', '<=', now()->addHours(24))
+            ->orderBy('tanggal_selesai')
+            ->take(5)
+            ->get();
+
+        // Pengajuan terbaru untuk tabel
+        $totalPengajuan = $stats['total_pengajuan'];
+        $pengajuans = $filterDates(clone $basePengajuan)
+            ->with(['satker', 'perkaras.barangs.lelang'])
+            ->when($isPusat, fn($q) => $q->whereNotIn('status', ['draft']))
             ->latest()
             ->take(5)
             ->get();
 
-        $totalPengajuan = $stats['total_pengajuan'];
-
-        return view('admin.dashboard', compact('stats', 'pengajuans', 'totalPengajuan'));
+        return view('admin.dashboard', compact(
+            'stats', 'statsPerkara', 'statsBarang',
+            'monitoringSatker', 'aktivitasTerbaru',
+            'lelangAkanBerakhir', 'pengajuans', 'totalPengajuan', 'unpaidDetails',
+            'soldDetails'
+        ));
     }
     
     public function index(Request $request)
@@ -113,6 +220,9 @@ class AdminPusatController extends Controller
 
     public function store(Request $request)
     {
+        if (auth()->user()->role !== 'admin_pusat') {
+            abort(403, 'Hanya Admin Pusat yang dapat membuat user baru.');
+        }
         
 
         $request->validate([
@@ -152,17 +262,17 @@ class AdminPusatController extends Controller
     public function destroy(PengajuanLelang $pengajuan)
     {
         $pengajuan->load([
-            'dokumen',
-            'perkaras.dokumenPerkaras',
-            'perkaras.barangs.FotoBarangs'
+            'dokumenPengajuan',
+            'perkaras.dokumenPerkara',
+            'perkaras.barangs.fotoBarang'
         ]);
 
         DB::transaction(function () use ($pengajuan) {
 
             // 1. Dokumen pengajuan
-            foreach ($pengajuan->dokumen ?? [] as $doc) {
-                if ($doc->file_path && Storage::exists($doc->file_path)) {
-                    Storage::delete($doc->file_path);
+            foreach ($pengajuan->dokumenPengajuan ?? [] as $doc) {
+                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                    Storage::disk('public')->delete($doc->file_path);
                 }
                 $doc->delete();
             }
@@ -173,9 +283,9 @@ class AdminPusatController extends Controller
                 // 🔸 Barang
                 foreach ($perkara->barangs ?? [] as $barang) {
 
-                    foreach ($barang->fotoBarangs ?? [] as $docBarang) {
-                        if ($docBarang->file_path && Storage::exists($docBarang->file_path)) {
-                            Storage::delete($docBarang->file_path);
+                    foreach ($barang->fotoBarang ?? [] as $docBarang) {
+                        if ($docBarang->file_path && Storage::disk('public')->exists($docBarang->file_path)) {
+                            Storage::disk('public')->delete($docBarang->file_path);
                         }
                         $docBarang->delete();
                     }
@@ -184,9 +294,9 @@ class AdminPusatController extends Controller
                 }
 
                 // 🔸 Dokumen perkara
-                foreach ($perkara->dokumenPerkaras ?? [] as $docPerkara) {
-                    if ($docPerkara->file_path && Storage::exists($docPerkara->file_path)) {
-                        Storage::delete($docPerkara->file_path);
+                foreach ($perkara->dokumenPerkara ?? [] as $docPerkara) {
+                    if ($docPerkara->file_path && Storage::disk('public')->exists($docPerkara->file_path)) {
+                        Storage::disk('public')->delete($docPerkara->file_path);
                     }
                     $docPerkara->delete();
                 }
@@ -195,6 +305,8 @@ class AdminPusatController extends Controller
             }
 
             // 3. Hapus pengajuan
+            AuditLogController::log($pengajuan->id, 'PengajuanLelang', 'deleted', "Menghapus pengajuan lelang: {$pengajuan->judul_pengajuan}");
+
             $pengajuan->delete();
         });
 
@@ -241,6 +353,8 @@ class AdminPusatController extends Controller
             'catatan_revisi' => null // bersihin kalau ada sisa revisi
         ]);
 
+        AuditLogController::log($pengajuan->id, 'PengajuanLelang', 'approved', "Menyetujui pengajuan lelang: {$pengajuan->judul_pengajuan}");
+
         return back()->with('success', 'Pengajuan berhasil disetujui');
     }
 
@@ -277,6 +391,8 @@ class AdminPusatController extends Controller
             'status'         => 'revision',
             'catatan_revisi' => $riwayat,
         ]);
+
+        AuditLogController::log($pengajuan->id, 'PengajuanLelang', 'revision', "Mengembalikan pengajuan untuk revisi: {$pengajuan->judul_pengajuan}");
 
         return redirect()
             ->route('admin.pengajuan.index')

@@ -18,13 +18,15 @@ class BarangPolicy
 
     public function create(User $user, Perkara $perkara)
     {
-        return $user->satker_id === $perkara->pengajuan->satker_id;
+        return $user->satker_id === $perkara->pengajuan->satker_id
+            && in_array($perkara->pengajuan->status, ['draft', 'revision']);
     }
 
     public function update(User $user, Barang $barang)
     {
         if ($user->isAdminPusat()) return true;
 
-        return $user->satker_id === $barang->perkara->pengajuan->satker_id;
+        return $user->satker_id === $barang->perkara->pengajuan->satker_id
+            && in_array($barang->perkara->pengajuan->status, ['draft', 'revision']);
     }
 }

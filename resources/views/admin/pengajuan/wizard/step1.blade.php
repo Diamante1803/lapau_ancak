@@ -280,8 +280,11 @@
                                         </label>
                                         <input type="file" name="files[sk_panitia]"
                                             accept=".pdf"
-                                            class="form-control form-control-sm"
+                                            class="form-control form-control-sm @error('files.sk_panitia') is-invalid @enderror"
                                             style="border-radius:6px;">
+                                        @error('files.sk_panitia')
+                                        <small class="text-danger">{{ $message }}</small>
+                                        @enderror
                                         @if($sk)
                                         <small class="text-muted" style="font-size:0.7rem;">
                                             Upload baru untuk mengganti —
@@ -308,8 +311,11 @@
                                         </label>
                                         <input type="file" name="files[izin_penjualan]"
                                             accept=".pdf"
-                                            class="form-control form-control-sm"
+                                            class="form-control form-control-sm @error('files.izin_penjualan') is-invalid @enderror"
                                             style="border-radius:6px;">
+                                        @error('files.izin_penjualan')
+                                        <small class="text-danger">{{ $message }}</small>
+                                        @enderror
                                         @if($izin)
                                         <small class="text-muted" style="font-size:0.7rem;">
                                             Upload baru untuk mengganti —
@@ -336,8 +342,11 @@
                                         </label>
                                         <input type="file" name="files[surat_penetapan_harga]"
                                             accept=".pdf"
-                                            class="form-control form-control-sm"
+                                            class="form-control form-control-sm @error('files.surat_penetapan_harga') is-invalid @enderror"
                                             style="border-radius:6px;">
+                                        @error('files.surat_penetapan_harga')
+                                        <small class="text-danger">{{ $message }}</small>
+                                        @enderror
                                         @if($harga)
                                         <small class="text-muted" style="font-size:0.7rem;">
                                             Upload baru untuk mengganti —

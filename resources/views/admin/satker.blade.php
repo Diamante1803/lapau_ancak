@@ -34,43 +34,28 @@
 {{-- STATISTIK --}}
 <div class="row mb-4">
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100" style="border-radius:12px; border:1px solid #d4edda;">
-            <div class="card-body d-flex align-items-center py-3">
-                <div style="width:46px;height:46px;border-radius:10px;background:#e8f5ee;display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
-                    <i class="fas fa-building" style="color:#1a6b3c;font-size:1.1rem;"></i>
-                </div>
-                <div>
-                    <div style="font-size:1.6rem;font-weight:700;color:#1a6b3c;line-height:1;">{{ $totalSatker }}</div>
-                    <div style="font-size:0.78rem;color:#6c757d;">Total Satker</div>
-                </div>
-            </div>
-        </div>
+        <x-statistic-card
+            title="Total Satker"
+            value="{{ $totalSatker }}"
+            icon="fa-building"
+            color="#1a6b3c"
+        />
     </div>
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100" style="border-radius:12px; border:1px solid #ffeeba;">
-            <div class="card-body d-flex align-items-center py-3">
-                <div style="width:46px;height:46px;border-radius:10px;background:#fff8e1;display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
-                    <i class="fas fa-user-check" style="color:#f39c12;font-size:1.1rem;"></i>
-                </div>
-                <div>
-                    <div style="font-size:1.6rem;font-weight:700;color:#856404;line-height:1;">{{ $denganPJ }}</div>
-                    <div style="font-size:0.78rem;color:#6c757d;">Memiliki Penanggung Jawab</div>
-                </div>
-            </div>
-        </div>
+        <x-statistic-card
+            title="Memiliki Penanggung Jawab"
+            value="{{ $denganPJ }}"
+            icon="fa-user-check"
+            color="#f39c12"
+        />
     </div>
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100" style="border-radius:12px; border:1px solid #f5c6cb;">
-            <div class="card-body d-flex align-items-center py-3">
-                <div style="width:46px;height:46px;border-radius:10px;background:#fde8e8;display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;">
-                    <i class="fas fa-user-times" style="color:#c0392b;font-size:1.1rem;"></i>
-                </div>
-                <div>
-                    <div style="font-size:1.6rem;font-weight:700;color:#c0392b;line-height:1;">{{ $tanpaPJ }}</div>
-                    <div style="font-size:0.78rem;color:#6c757d;">Belum Ada Penanggung Jawab</div>
-                </div>
-            </div>
-        </div>
+        <x-statistic-card
+            title="Belum Ada Penanggung Jawab"
+            value="{{ $tanpaPJ }}"
+            icon="fa-user-times"
+            color="#c0392b"
+        />
     </div>
 </div>
 
@@ -108,7 +93,7 @@
                         <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">NAMA SATKER</th>
                         <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">PENANGGUNG JAWAB</th>
                         <th class="border-0" style="color:#6c757d;font-weight:600;font-size:0.78rem;">ALAMAT</th>
-                        <th class="border-0 text-center" style="color:#6c757d;font-weight:600;font-size:0.78rem;width:140px;">AKSI</th>
+                        <th class="border-0 text-center" style="color:#6c757d;font-weight:600;font-size:0.78rem;width:80px;" data-no-sort>AKSI</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,20 +144,20 @@
 
                         {{-- AKSI --}}
                         <td class="align-middle text-center" style="padding:14px 12px;">
-                            <button class="btn btn-sm mr-1"
-                                style="background:#e8f5ee;color:#1a6b3c;border-radius:6px;padding:4px 10px;font-size:0.78rem;"
-                                data-toggle="modal"
-                                data-target="#modalEditSatker-{{ $satker->id }}"
-                                title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm"
-                                style="background:#fde8e8;color:#c0392b;border-radius:6px;padding:4px 10px;font-size:0.78rem;"
-                                data-toggle="modal"
-                                data-target="#modalHapusSatker-{{ $satker->id }}"
-                                title="Hapus">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <div class="dropdown no-arrow">
+                                <button class="btn-action-dots dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-right dropdown-menu-smooth animated--fade-in">
+                                    <a class="dropdown-item small font-weight-bold" href="#" data-toggle="modal" data-target="#modalEditSatker-{{ $satker->id }}">
+                                        <i class="fas fa-edit fa-sm fa-fw mr-2 text-warning"></i> Edit Satker
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item small font-weight-bold text-danger" href="#" data-toggle="modal" data-target="#modalHapusSatker-{{ $satker->id }}">
+                                        <i class="fas fa-trash fa-sm fa-fw mr-2"></i> Hapus Satker
+                                    </a>
+                                </div>
+                            </div>
                         </td>
                     </tr>
 

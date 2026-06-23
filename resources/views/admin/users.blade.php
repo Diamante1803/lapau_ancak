@@ -20,29 +20,6 @@
         </button>
     </div>
 
-    {{-- ALERT --}}
-    @if(session('success'))
-    <div id="autoAlert" class="alert alert-success alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #1a6b3c; border-radius: 8px;">
-        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    <script>
-        setTimeout(function() {
-            let a = document.getElementById('autoAlert');
-            if (a) { a.style.transition = 'opacity 0.5s'; a.style.opacity = '0'; setTimeout(() => a.remove(), 500); }
-        }, 4000);
-    </script>
-    @endif
-
-    @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm"
-        style="border-left: 4px solid #e74a3b; border-radius: 8px;">
-        <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
-        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-    </div>
-    @endif
-
     {{-- TABEL USER --}}
     <div class="card shadow mb-4" style="border: none; border-radius: 12px; overflow: hidden;">
 
@@ -69,7 +46,7 @@
                             <th class="border-0" style="color: #1a6b3c; font-size: 0.82rem;">Kontak</th>
                             <th class="border-0" style="color: #1a6b3c; font-size: 0.82rem;">Satker</th>
                             <th class="border-0" style="color: #1a6b3c; font-size: 0.82rem;">Dibuat</th>
-                            <th class="border-0 text-center" style="color: #1a6b3c; font-size: 0.82rem;">Aksi</th>
+                            <th class="border-0 text-center" style="color: #1a6b3c; font-size: 0.82rem; width: 80px;" data-no-sort>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -118,41 +95,25 @@
                             </td>
 
                             <td class="align-middle text-center">
-                                <div class="d-flex justify-content-center" style="gap: 4px;">
-
-                                    {{-- EDIT --}}
-                                    <button type="button" class="btn btn-sm"
-                                        style="background: #fff3cd; color: #856404; border-radius: 6px; width: 32px;"
-                                        data-toggle="modal"
-                                        data-target="#modalEditUser-{{ $user->id }}"
-                                        title="Edit User">
-                                        <i class="fas fa-edit"></i>
+                                <div class="dropdown no-arrow">
+                                    <button class="btn-action-dots dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
                                     </button>
-
-                                    {{-- RESET PASSWORD --}}
-                                    <button type="button" class="btn btn-sm"
-                                        style="background: #cce5ff; color: #004085; border-radius: 6px; width: 32px;"
-                                        data-toggle="modal"
-                                        data-target="#modalResetPass-{{ $user->id }}"
-                                        title="Reset Password">
-                                        <i class="fas fa-key"></i>
-                                    </button>
-
-                                    {{-- DELETE --}}
-                                    <button type="button" class="btn btn-sm"
-                                        style="background: #fde8e8; color: #e74a3b; border-radius: 6px; width: 32px;"
-                                        title="Hapus"
-                                        onclick="konfirmasiHapusUser('{{ $user->id }}', '{{ $user->name }}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-
-                                    {{-- Form delete — hidden, di-trigger via JS --}}
-                                    <form id="formHapusUser-{{ $user->id }}"
-                                        action="{{ route('admin.users.destroy', $user->id) }}"
-                                        method="POST" style="display:none;">
+                                    <div class="dropdown-menu dropdown-menu-right dropdown-menu-smooth animated--fade-in">
+                                        <a class="dropdown-item small font-weight-bold" href="#" data-toggle="modal" data-target="#modalEditUser-{{ $user->id }}">
+                                            <i class="fas fa-edit fa-sm fa-fw mr-2 text-warning"></i> Edit User
+                                        </a>
+                                        <a class="dropdown-item small font-weight-bold" href="#" data-toggle="modal" data-target="#modalResetPass-{{ $user->id }}">
+                                            <i class="fas fa-key fa-sm fa-fw mr-2 text-primary"></i> Reset Password
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item small font-weight-bold text-danger" href="#" onclick="event.preventDefault(); konfirmasiHapusUser('{{ $user->id }}', '{{ $user->name }}')">
+                                            <i class="fas fa-trash fa-sm fa-fw mr-2"></i> Hapus User
+                                        </a>
+                                    </div>
+                                    <form id="formHapusUser-{{ $user->id }}" action="{{ route('admin.users.destroy', $user->id) }}" method="POST" style="display:none;">
                                         @csrf @method('DELETE')
                                     </form>
-
                                 </div>
                             </td>
 
@@ -203,15 +164,29 @@
                                                     value="{{ $user->kontak }}">
                                             </div>
                                             <div class="form-group mb-0">
-                                                <label class="small font-weight-bold text-muted">Satker</label>
-                                                <select name="satker_id" class="form-control" style="border-radius: 8px;" required>
-                                                    @foreach($satkers as $satker)
-                                                    <option value="{{ $satker->id }}"
-                                                        {{ $user->satker_id == $satker->id ? 'selected' : '' }}>
-                                                        {{ $satker->nama_satker }}
-                                                    </option>
-                                                    @endforeach
-                                                </select>
+                                                <label class="filter-label">Satker</label>
+                                                <div class="custom-dropdown-container">
+                                                    <input type="hidden" name="satker_id" id="hidden_satker_edit_{{ $user->id }}" value="{{ $user->satker_id }}">
+                                                    <button type="button" class="interactive-field text-left d-flex justify-content-between align-items-center" 
+                                                            onclick="toggleCustomDropdown('satker_edit_{{ $user->id }}')">
+                                                        <span id="labelSatkerEdit_{{ $user->id }}" class="text-truncate mr-2">
+                                                            {{ $user->satker->nama_satker ?? 'Pilih Satker' }}
+                                                        </span>
+                                                        <i class="material-icons dropdown-toggle-icon" style="font-size:18px; color:var(--c-theme-primary);" id="icon-satker_edit_{{ $user->id }}">expand_more</i>
+                                                    </button>
+                                                    <div class="custom-dropdown-menu shadow-lg d-none" id="menu-satker_edit_{{ $user->id }}">
+                                                        <div class="p-2 border-bottom sticky-top bg-white">
+                                                            <input type="text" class="form-control form-control-sm" placeholder="Cari satker..." oninput="filterDropdownList('satker_edit_{{ $user->id }}', this.value)" onclick="event.stopPropagation()">
+                                                        </div>
+                                                        <div class="list-wrapper">
+                                                        @foreach($satkers as $s)
+                                                            <div class="dropdown-item-custom py-2 px-3 cursor-pointer" data-search="{{ strtolower($s->nama_satker) }}" onclick="selectDropdownOption('satker_edit_{{ $user->id }}', '{{ $s->id }}', '{{ $s->nama_satker }}', 'hidden_satker_edit_{{ $user->id }}', 'labelSatkerEdit_{{ $user->id }}')">
+                                                                <div class="small font-weight-bold">{{ $s->nama_satker }}</div>
+                                                            </div>
+                                                        @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="modal-footer" style="background: #f8fff9;">
@@ -368,18 +343,34 @@
                             value="{{ old('kontak') }}">
                     </div>
 
-                    <div class="form-group">
-                        <label class="small font-weight-bold text-muted">Satker</label>
-                        <select name="satker_id"
-                            class="form-control @error('satker_id') is-invalid @enderror"
-                            style="border-radius: 8px;" required>
-                            <option value="">-- Pilih Satker --</option>
-                            @foreach($satkers as $satker)
-                            <option value="{{ $satker->id }}" {{ old('satker_id') == $satker->id ? 'selected' : '' }}>
-                                {{ $satker->nama_satker }}
-                            </option>
-                            @endforeach
-                        </select>
+                    <div class="form-group mb-3">
+                        <label class="filter-label">Satker</label>
+                        <div class="custom-dropdown-container">
+                            <input type="hidden" name="satker_id" id="hidden_satker_create" value="{{ old('satker_id') }}">
+                            <button type="button" class="interactive-field text-left d-flex justify-content-between align-items-center @error('satker_id') is-invalid @enderror" 
+                                    id="btnSatkerCreate" onclick="toggleCustomDropdown('satker_create')">
+                                <span id="labelSatkerCreate" class="text-truncate mr-2">
+                                    @if(old('satker_id'))
+                                        {{ $satkers->firstWhere('id', old('satker_id'))->nama_satker ?? '-- Pilih Satker --' }}
+                                    @else
+                                        -- Pilih Satker --
+                                    @endif
+                                </span>
+                                <i class="material-icons dropdown-toggle-icon" style="font-size:18px; color:var(--c-theme-primary);" id="icon-satker_create">expand_more</i>
+                            </button>
+                            <div class="custom-dropdown-menu shadow-lg d-none" id="menu-satker_create">
+                                <div class="p-2 border-bottom sticky-top bg-white">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Cari satker..." oninput="filterDropdownList('satker_create', this.value)" onclick="event.stopPropagation()">
+                                </div>
+                                <div class="list-wrapper">
+                                @foreach($satkers as $s)
+                                    <div class="dropdown-item-custom py-2 px-3 cursor-pointer" data-search="{{ strtolower($s->nama_satker) }}" onclick="selectDropdownOption('satker_create', '{{ $s->id }}', '{{ $s->nama_satker }}', 'hidden_satker_create', 'labelSatkerCreate')">
+                                        <div class="small font-weight-bold">{{ $s->nama_satker }}</div>
+                                    </div>
+                                @endforeach
+                                </div>
+                            </div>
+                        </div>
                         @error('satker_id')
                             <small class="text-danger">{{ $message }}</small>
                         @enderror

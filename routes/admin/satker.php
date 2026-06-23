@@ -82,7 +82,7 @@ Route::middleware(['auth', 'role:admin_satker'])
     // CRUD Barang (dipanggil dari step 3)
     Route::post('perkara/{perkara}/barang', [BarangController::class, 'storeBarang'])
         ->name('perkara.barang.store');
-    Route::resource('barang', BarangController::class);
+    Route::resource('barang', BarangController::class)->only(['update', 'destroy']);
     Route::post('barang/{barang}/foto', [BarangController::class, 'uploadFotoBarang'])
         ->name('barang.uploadFoto');
     Route::delete('barang/foto/{id}', [BarangController::class, 'destroyFoto'])

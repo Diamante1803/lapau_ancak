@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use App\Models\Perkara;
 use App\Models\Barang;
 use App\Models\FotoBarang;
+use App\Http\Controllers\AuditLogController;
 
 class BarangController extends Controller
 {
@@ -19,6 +20,8 @@ class BarangController extends Controller
     // =========================
     public function storeBarang(Request $request, Perkara $perkara)
     {
+        $this->authorize('create', [Barang::class, $perkara]);
+
         $request->validate([
             'nama_barang'      => 'required|string|max:255',
             'deskripsi'        => 'nullable|string|max:500',
@@ -38,6 +41,8 @@ class BarangController extends Controller
             'harga_awal'       => $request->harga_awal ?? 0,
             'catatan_internal' => $request->catatan_internal,
         ]);
+
+        AuditLogController::log($perkara->pengajuan_lelang_id, 'Barang', 'created', "Menambahkan barang baru: {$request->nama_barang}");
     
         return back()->with('success', 'Barang berhasil ditambahkan.');
     }
@@ -49,6 +54,8 @@ class BarangController extends Controller
     
     public function update(Request $request, Barang $barang)
     {
+        $this->authorize('update', $barang);
+
         $request->validate([
             'nama_barang'      => 'required|string|max:255',
             'deskripsi'        => 'nullable|string',
@@ -78,18 +85,22 @@ class BarangController extends Controller
             }
         }
     
+        AuditLogController::log($barang->id, 'Barang', 'updated', "Memperbarui data barang: {$barang->nama_barang}");
+
         return back()->with('success', 'Barang berhasil diperbarui.');
     }
 
     public function destroy(Barang $barang)
     {
+        $this->authorize('update', $barang);
+
         // optional: hapus foto juga
-        foreach ($barang->fotos ?? [] as $foto) {
-            if ($foto->path && Storage::exists($foto->path)) {
-                Storage::delete($foto->path);
-            }
+        foreach ($barang->fotoBarang ?? [] as $foto) {
+            if ($foto->file_path) Storage::disk('public')->delete($foto->file_path);
             $foto->delete();
         }
+
+        AuditLogController::log($barang->id, 'Barang', 'deleted', "Menghapus barang: {$barang->nama_barang}");
 
         $barang->delete();
 
@@ -101,6 +112,8 @@ class BarangController extends Controller
     // =========================
     public function uploadFotoBarang(Request $request, Barang $barang)
     {
+        $this->authorize('update', $barang);
+
         if (!$request->hasFile('foto')) {
             return back()->with('error', 'Tidak ada file.');
         }
@@ -162,6 +175,8 @@ class BarangController extends Controller
             ]);
         }
 
+        AuditLogController::log($barang->id, 'Barang', 'updated', "Upload foto baru untuk barang: {$barang->nama_barang}");
+
         return back()->with('success', 'Foto berhasil diupload.');
     }
 
@@ -169,6 +184,7 @@ class BarangController extends Controller
     public function destroyFoto($id)
     {
         $foto = FotoBarang::findOrFail($id);
+        $this->authorize('update', $foto->barang);
 
         // hapus file fisik
         if (Storage::disk('public')->exists($foto->file_path)) {

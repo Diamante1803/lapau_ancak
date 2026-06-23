@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Lelang;
+use App\Events\LelangStatusUpdate;
 use Carbon\Carbon;
 
 class UpdateStatusLelang extends Command
@@ -24,6 +25,7 @@ class UpdateStatusLelang extends Command
         foreach ($diaktifkan as $lelang) {
             $lelang->update(['status' => 'active']);
             $lelang->barang->update(['status' => 'in_auction']);
+            broadcast(new LelangStatusUpdate($lelang->id, 'active'));
             $this->info('Aktif: Lelang ID ' . $lelang->id . ' - ' . $lelang->barang->nama_barang);
         }
 
@@ -49,6 +51,7 @@ class UpdateStatusLelang extends Command
                 $lelang->barang->update(['status' => 'unsold']);
             }
 
+            broadcast(new LelangStatusUpdate($lelang->id, 'closed'));
             $this->info('Selesai: Lelang ID ' . $lelang->id . ' - ' . $lelang->barang->nama_barang);
         }
 

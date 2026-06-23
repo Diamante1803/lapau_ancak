@@ -6,12 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\User;
 
-class AuditLog extends Model
+class AuditLogs extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
+        'event',
+        'auditable_type',
+        'auditable_id',
+        'description',
         'aksi',
         'entitas',
         'entitas_id',
